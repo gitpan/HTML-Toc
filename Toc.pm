@@ -11,7 +11,7 @@ use strict;
 BEGIN {
 	use vars qw($VERSION);
 
-	$VERSION = '0.91';
+	$VERSION = '0.92';
 }
 
 
@@ -404,6 +404,8 @@ sub format {
 		# Format table of contents
 	$self->_formatToc("0", "0", \$toc, \@tocLines, 0);
 		# Remove last newline
+#	$toc =~ s/\r\n$//m;
+#	$toc =~ s/\r$//m;
 	$toc =~ s/\n$//m;
 		# Add header & footer
 	$toc = $self->{options}{'header'} . $toc . $self->{options}{'footer'};

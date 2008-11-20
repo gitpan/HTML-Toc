@@ -608,7 +608,7 @@ Instead of using the HTML ordered list (OL), it's also possible to use the gener
     my $tocGenerator = HTML::TocGenerator->new();
 
     $toc->setOptions({
-		'templateLevel' => '"<li>$node &nbsp;$text\n"',
+       'templateLevel' => '"<li>$node &nbsp;$text\n"',
     });
     $tocGenerator->generateFromFile($toc, 'index.htm');
     print $toc->format();
@@ -809,7 +809,7 @@ Format tokenized ToC.
              - $string:  string to retrieve ToC from
              - $options: hash reference containing generator options.
 
-Extend ToC from specified string.  For generator options, see L<HTML::TocGenerator Options|"HTML::TocGenerator Options">
+Extend ToC from specified string.  For available options, see L<Parser Options|"Parser Options">
 
 =head2 HTML::TocGenerator::extendFromFile()
 
@@ -818,7 +818,7 @@ Extend ToC from specified string.  For generator options, see L<HTML::TocGenerat
              - $filename: (reference to array of) file(s) to extend ToC from
              - $options:  hash reference containing generator options.
 
-Extend ToC from specified file.  For generator options, see L<HTML::TocGenerator Options|"HTML::TocGenerator Options">.  For an example, see L<Extend an existing ToC>.
+Extend ToC from specified file.  For available options, see L<Parser Options|"Parser Options">.  For an example, see L<Extend an existing ToC>.
 
 =head2 HTML::TocGenerator::generate()
 
@@ -827,7 +827,7 @@ Extend ToC from specified file.  For generator options, see L<HTML::TocGenerator
              - $string:  string to retrieve ToC from
              - $options: hash reference containing generator options.
 
-Generate ToC from specified string.  Before generating, the ToC will be cleared.  For extending an existing ToC, use the L<HTML::TocGenerator::extend()|"HTML::TocGenerator::extend()"> method.  For generator options, see L<HTML::TocGenerator Options|"HTML::TocGenerator Options">.
+Generate ToC from specified string.  Before generating, the ToC will be cleared.  For extending an existing ToC, use the L<HTML::TocGenerator::extend()|"HTML::TocGenerator::extend()"> method.  For available options, see L<Parser Options|"Parser Options">.
 
 =head2 HTML::TocGenerator::generateFromFile()
 
@@ -837,7 +837,7 @@ Generate ToC from specified string.  Before generating, the ToC will be cleared.
              - $filename: (reference to array of) file(s) to generate ToC from
              - $options:  hash reference containing generator options.
 
-Generate ToC from specified file.  Before generating, the ToC will be cleared.  For extending an extisting ToC, use the L<HTML::TocGenerator::extendFromFile()|"HTML::TocGenerator::extendFromFile()"> method.  For generator options, see L<HTML::TocGenerator Options|"HTML::TocGenerator Options">.
+Generate ToC from specified file.  Before generating, the ToC will be cleared.  For extending an extisting ToC, use the L<HTML::TocGenerator::extendFromFile()|"HTML::TocGenerator::extendFromFile()"> method.  For available options, see L<Parser Options|"Parser Options">.
 
 =head2 HTML::TocInsertor::insert()
 
@@ -846,7 +846,7 @@ Generate ToC from specified file.  Before generating, the ToC will be cleared.  
              - $string:  string to insert ToC in
              - $options: hash reference containing insertor options.
 
-Insert ToC into specified string.  For insertor options, see L<HTML::TocInsertor Options|"HTML::TocInsertor Options">.
+Insert ToC into specified string.  For available options, see L<Parser Options|"Parser Options">.
 
 =head2 HTML::TocInsertor::insertIntoFile()
 
@@ -855,7 +855,7 @@ Insert ToC into specified string.  For insertor options, see L<HTML::TocInsertor
              - $filename: (reference to array of) file(s) to insert ToC in
              - $options:  hash reference containing insertor options.
 
-Insert ToC into specified file.  For insertor options, see L<HTML::TocInsertor Options|"HTML::TocInsertor Options">.
+Insert ToC into specified file.  For available options, see L<Parser Options|"Parser Options">.
 
 =head2 HTML::TocUpdator::insert()
 
@@ -967,7 +967,7 @@ the output will be:
 Each ToC will use its own numbering scheme.  Now if 'C<doUseGroupsGlobal = 1>' is specified:
 
     $tocGenerator->generateFromFile(
-    	[$toc1, $toc2], 'index.htm', {'doUseGroupsGlobal' => 1}
+       [$toc1, $toc2], 'index.htm', {'doUseGroupsGlobal' => 1}
     );
 
 the output will be:

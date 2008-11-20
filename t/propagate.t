@@ -171,6 +171,6 @@ $toc->setOptions({
 
 #--- 10. declaration pass through ---------------------------------------------
 
-$tocInsertor->insert($toc, '<! DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"><h1>Header</h1>', {'output' => \$output});
+$tocInsertor->insert($toc, '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"><h1>Header</h1>', {'output' => \$output});
 	# Test ToC
-ok($output, '<! DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"><h1>Header</h1>');
+ok($output, '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"><h1>Header</h1>');

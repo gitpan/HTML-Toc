@@ -1,6 +1,11 @@
 Revision history for Perl extension HTML::Toc.
 
-2001-09-03   Freddy Vulto <fvu@fvu.myweb.nl>
+2008-11-20   Freddy Vulto <fvulto@gmail.com>
+	Release 0.92
+
+	- Fixed tests on Debian.
+
+2001-09-03   Freddy Vulto <fvulto@gmail.com>
 
 	Release 0.91
 
@@ -19,7 +24,7 @@ Revision history for Perl extension HTML::Toc.
 	  the ancestor call to HTML::TocGenerator only when '_doDeleteTokens'
 	  equals false.
 
-2001-08-09   Freddy Vulto <fvu@fvu.myweb.nl>
+2001-08-09   Freddy Vulto <fvulto@gmail.com>
 
 	Release 0.90
 

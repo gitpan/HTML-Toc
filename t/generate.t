@@ -42,33 +42,33 @@ END {
 #--- 1. generate --------------------------------------------------------------
 
 $tocGenerator->generate($toc, "<h1>Header</h1>");
-ok($toc->format(), "<ul>\n<li>Header\n</ul>");
+ok($toc->format(), "<ul>\n<li>Header</li>\n</ul>");
 
 
 #--- 2. generateFromFile ------------------------------------------------------
 
 $tocGenerator->generateFromFile($toc, $filename);
-ok($toc->format(), "<ul>\n<li>Header\n</ul>");
+ok($toc->format(), "<ul>\n<li>Header</li>\n</ul>");
 
 
 #--- 3. generateFromFiles -----------------------------------------------------
 
 $tocGenerator->generateFromFile($toc, [$filename, $filename]);
-ok($toc->format(), "<ul>\n<li>Header\n<li>Header\n</ul>");
+ok($toc->format(), "<ul>\n<li>Header</li>\n<li>Header</li>\n</ul>");
 	
 
 #--- 4. doLinkToToken -----------------------------------------------------
 
 $toc->setOptions({'doLinkToToken' => 1});
 $tocGenerator->generateFromFile($toc, $filename, {'globalGroups' => 1});
-ok($toc->format(), "<ul>\n<li><a href=#h-1>Header</a>\n</ul>");
+ok($toc->format(), "<ul>\n<li><a href=\"#h-1\">Header</a></li>\n</ul>");
 
 
 #--- 5. doLinkToFile -------------------------------------------------------
 
 $toc->setOptions({'doLinkToFile' => 1});
 $tocGenerator->generateFromFile($toc, $filename);
-ok($toc->format(), "<ul>\n<li><a href=$filename#h-1>Header</a>\n</ul>");
+ok($toc->format(), "<ul>\n<li><a href=\"$filename#h-1\">Header</a></li>\n</ul>");
 
 
 #--- 6. templateAnchorHrefBegin -----------------------------------------------
@@ -78,7 +78,7 @@ $toc->setOptions({'templateAnchorHrefBegin' => '"test-$file"'});
 	# Generate ToC
 $tocGenerator->generateFromFile($toc, $filename);
 	# Test ToC
-ok($toc->format(), "<ul>\n<li>test-".$filename."Header</a>\n</ul>");
+ok($toc->format(), "<ul>\n<li>test-".$filename."Header</a></li>\n</ul>");
 	# Reset options
 $toc->setOptions({'templateAnchorHrefBegin' => undef});
 
@@ -98,7 +98,7 @@ $toc->setOptions({'templateAnchorHrefBegin' => \&AssembleAnchorHrefBegin});
 	# Generate ToC
 $tocGenerator->generateFromFile($toc, $filename);
 	# Test ToC
-ok($toc->format(), "<ul>\n<li>".$filename."h11Header</a>\n</ul>");
+ok($toc->format(), "<ul>\n<li>".$filename."h11Header</a></li>\n</ul>");
 	# Reset options
 $toc->setOptions({'templateAnchorHrefBegin' => undef});
 
@@ -118,7 +118,7 @@ $toc->setOptions({
 	'doLinkToToken' => 0,
 });
 $tocGenerator->generate($toc, "<h1>Header1</h1>\n<h2>Header2</h2>");
-ok($toc->format(), "<ul>\n<li>Header1\n</ul>");
+ok($toc->format(), "<ul>\n<li>Header1</li>\n</ul>");
 
 
 #--- 10. levelToToc level 2 --------------------------------------------------
@@ -129,7 +129,7 @@ $toc->setOptions({
 	'doLinkToToken' => 0,
 });
 $tocGenerator->generate($toc, "<h1>Header1</h1>\n<h2>Header2</h2>");
-ok($toc->format(), "<ul>\n<li>Header2\n</ul>");
+ok($toc->format(), "<ul>\n<li>Header2</li>\n</ul>");
 	# Restore options
 $toc->setOptions({
 	'levelToToc' => '.*',
@@ -162,14 +162,15 @@ $toc->setOptions({
 $tocGenerator->generate(
 	$toc, "<h1>Header1</h1>\n<h1 class=appendix>Appendix</h1>"
 );
-ok($toc->format() . "\n", <<'EOT');
+ok($toc->format() . "\n", <<HTML);
 <ul>
 <li>Header1
 <ul>
-<li>Appendix
+<li>Appendix</li>
 </ul>
+</li>
 </ul>
-EOT
+HTML
 
 
 #--- 13. groups not nested ----------------------------------------------------
@@ -190,11 +191,11 @@ $toc->setOptions({
 $tocGenerator->generate(
 	$toc, "<h1>Header1</h1>\n<h1 class=appendix>Appendix</h1>"
 );
-ok($toc->format() . "\n", <<'EOT');
+ok($toc->format() . "\n", <<HTML);
 <ul>
-<li>Header1
+<li>Header1</li>
 </ul>
 <ul>
-<li>Appendix
+<li>Appendix</li>
 </ul>
-EOT
+HTML

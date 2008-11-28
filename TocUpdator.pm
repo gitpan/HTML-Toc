@@ -8,14 +8,15 @@ package HTML::TocUpdator;
 
 use strict;
 use HTML::TocInsertor;
+use Data::Dumper;
 
 
 BEGIN {
-	use vars qw(@ISA $VERSION);
+    use vars qw(@ISA $VERSION);
 
-	$VERSION = '0.91';
+    $VERSION = '1.00';
 
-	@ISA = qw(HTML::TocInsertor);
+    @ISA = qw(HTML::TocInsertor);
 }
 
 
@@ -36,21 +37,21 @@ END {}
 # function: Constructor.
 
 sub new {
-		# Get arguments
-	my ($aType) = @_;
-	my $self = $aType->SUPER::new;
-		# Bias to not update ToC
-	$self->{htu__Mode} = MODE_DO_NOTHING;
-		# Bias to not delete tokens
-	$self->{_doDeleteTokens} = 0;
-		# Reset batch variables
-	#$self->_resetBatchVariables;
+	# Get arguments
+    my ($aType) = @_;
+    my $self = $aType->SUPER::new;
+	# Bias to not update ToC
+    $self->{htu__Mode} = MODE_DO_NOTHING;
+	# Bias to not delete tokens
+    $self->{_doDeleteTokens} = 0;
+	# Reset batch variables
+    #$self->_resetBatchVariables;
 
-	$self->{options} = {};
-		
-		# TODO: Initialize output
+    $self->{options} = {};
+	
+	# TODO: Initialize output
 
-	return $self;
+    return $self;
 }  # new()
 
 
@@ -59,12 +60,12 @@ sub new {
 # args:     - $aTocs: Reference to array of tocs.
 
 sub _deinitializeUpdatorBatch {
-		# Get arguments
-	my ($self, $aTocs) = @_;
-		# Indicate end of ToC updating
-	$self->{htu__Mode} = MODE_DO_NOTHING;
-		# Deinitialize insertor batch
-	$self->_deinitializeInsertorBatch();
+	# Get arguments
+    my ($self, $aTocs) = @_;
+	# Indicate end of ToC updating
+    $self->{htu__Mode} = MODE_DO_NOTHING;
+	# Deinitialize insertor batch
+    $self->_deinitializeInsertorBatch();
 }  # _deinitializeUpdatorBatch()
 
 
@@ -75,7 +76,7 @@ sub _deinitializeUpdatorBatch {
 # returns:  True (1) if hash1 equals hash2, 0 if not.  For example, with the
 #           following hashes:
 #
-#              %hash1 = {                     %hash2 = {
+#              %hash1 = {                    %hash2 = {
 #                 'class' => 'header',          'class' => 'header',
 #                 'id'    => 'intro1'           'id'    => 'intro2'
 #              }                             }
@@ -84,28 +85,28 @@ sub _deinitializeUpdatorBatch {
 # note:     Class function.
 
 sub _doesHashEqualHash {
-		# Get arguments
-	my ($aHash1, $aHash2) = @_;
-		# Local variables
-	my ($key1, $value1, $key2, $value2, $result);
-		# Bias to success
-	$result = 1;
-		# Loop through hash1 while values available
-	HASH1: while (($key1, $value1) = each %$aHash1) {
-		# Yes, values are available;
-			# Value1 differs from value2?
-		if ($value1 ne $aHash2->{$key1}) {
-			# Yes, hashes differ;
-				# Indicate condition fails
-			$result = 0;
-				# Reset 'each' iterator which we're going to break
-			keys %$aHash2;
-				# Break loop
-			last HASH1;
-		}
+	# Get arguments
+    my ($aHash1, $aHash2) = @_;
+	# Local variables
+    my ($key1, $value1, $key2, $value2, $result);
+	# Bias to success
+    $result = 1;
+	# Loop through hash1 while values available
+    HASH1: while (($key1, $value1) = each %$aHash1) {
+	# Yes, values are available;
+	    # Value1 differs from value2?
+	if ($value1 ne $aHash2->{$key1}) {
+	    # Yes, hashes differ;
+		# Indicate condition fails
+	    $result = 0;
+		# Reset 'each' iterator which we're going to break
+	    keys %$aHash2;
+		# Break loop
+	    last HASH1;
 	}
-		# Return value
-	return $result;
+    }
+	# Return value
+    return $result;
 }  # _doesHashEqualHash()
 
 
@@ -123,33 +124,33 @@ sub _doesHashEqualHash {
 # note:     Class function.
 
 sub _doesTagExistInArray {
-		# Get arguments
-	my ($aTag, $aAttributes, $aArray) = @_;
-		# Local variables
-	my ($tag, $result);
-		# Bias to non-existing tag
-	$result = 0;
-		# Loop through existing tags
-	TAG: foreach $tag (@{$aArray}) {
-		if (defined(@{$tag}[0])) {
-				# Does tag equals any existing tag?
-			if ($aTag eq @{$tag}[0]) {
-				# Yes, tag equals existing tag;
-					# Do hashes equal?
-				if (HTML::TocUpdator::_doesHashEqualHash(
-					$aAttributes, @{$tag}[1]
-				)) {
-					# Yes, hashes are the same;
-						# Indicate tag exists in array
-					$result = 1;
-						# Break loop
-					last TAG;
-				}
-			}
+	# Get arguments
+    my ($aTag, $aAttributes, $aArray) = @_;
+	# Local variables
+    my ($tag, $result);
+	# Bias to non-existing tag
+    $result = 0;
+	# Loop through existing tags
+    TAG: foreach $tag (@{$aArray}) {
+	if (defined(@{$tag}[0])) {
+		# Does tag equals any existing tag?
+	    if ($aTag eq @{$tag}[0]) {
+		# Yes, tag equals existing tag;
+		    # Do hashes equal?
+		if (HTML::TocUpdator::_doesHashEqualHash(
+		    $aAttributes, @{$tag}[1]
+		)) {
+		    # Yes, hashes are the same;
+			# Indicate tag exists in array
+		    $result = 1;
+			# Break loop
+		    last TAG;
 		}
+	    }
 	}
-		# Return value
-	return $result;
+    }
+	# Return value
+    return $result;
 }  # _doesTagExistInArray()
 
 
@@ -162,14 +163,14 @@ sub _doesTagExistInArray {
 #           ToC.  That's why we're calling 'insertor' methods here.
 
 sub _initializeUpdatorBatch {
-		# Get arguments
-	my ($self, $aMode, $aTocs, $aOptions) = @_;
-		# Initialize insertor batch
-	$self->_initializeInsertorBatch($aTocs, $aOptions);
-		# Parse ToC update templates
-	$self->_parseTocUpdateTokens();
-		# Indicate start of ToC updating
-	$self->{htu__Mode} = $aMode;
+	# Get arguments
+    my ($self, $aMode, $aTocs, $aOptions) = @_;
+	# Initialize insertor batch
+    $self->_initializeInsertorBatch($aTocs, $aOptions);
+	# Parse ToC update templates
+    $self->_parseTocUpdateTokens();
+	# Indicate start of ToC updating
+    $self->{htu__Mode} = $aMode;
 }  # _initializeUpdatorBatch()
 
 
@@ -177,35 +178,35 @@ sub _initializeUpdatorBatch {
 # function: Parse ToC insertion point specifier.
 
 sub _parseTocUpdateTokens {
-		# Get arguments
-	my ($self) = @_;
-		# Local variables
-	my ($toc, $tokenType, $tokenPreposition, $token);
-	my ($tocInsertionPoint, $tocInsertionPointTokenAttributes);
-		# Create parser for update begin tokens
-	my $tokenUpdateBeginParser = HTML::_TokenUpdateParser->new(
-		$self->{_tokensUpdateBegin}
-	);
-		# Create parser for update end tokens
-	my $tokenUpdateEndParser = HTML::_TokenUpdateParser->new(
-		$self->{_tokensUpdateEnd}
-	);
+	# Get arguments
+    my ($self) = @_;
+	# Local variables
+    my ($toc, $tokenType, $tokenPreposition, $token);
+    my ($tocInsertionPoint, $tocInsertionPointTokenAttributes);
+	# Create parser for update begin tokens
+    my $tokenUpdateBeginParser = HTML::_TokenUpdateParser->new(
+	$self->{_tokensUpdateBegin}
+    );
+	# Create parser for update end tokens
+    my $tokenUpdateEndParser = HTML::_TokenUpdateParser->new(
+	$self->{_tokensUpdateEnd}
+    );
 
-		# Loop through ToCs
-	foreach $toc (@{$self->{_tocs}}) {
-			# Parse update tokens
-		$tokenUpdateBeginParser->parse(
-			$toc->{_tokenUpdateBeginOfAnchorNameBegin}
-		);
-		$tokenUpdateBeginParser->parse($toc->{_tokenUpdateBeginOfAnchorNameEnd});
-		$tokenUpdateBeginParser->parse($toc->{_tokenUpdateBeginNumber});
-		$tokenUpdateBeginParser->parse($toc->{_tokenUpdateBeginToc});
+	# Loop through ToCs
+    foreach $toc (@{$self->{_tocs}}) {
+	    # Parse update tokens
+	$tokenUpdateBeginParser->parse(
+	    $toc->{_tokenUpdateBeginOfAnchorNameBegin}
+	);
+	$tokenUpdateBeginParser->parse($toc->{_tokenUpdateBeginOfAnchorNameEnd});
+	$tokenUpdateBeginParser->parse($toc->{_tokenUpdateBeginNumber});
+	$tokenUpdateBeginParser->parse($toc->{_tokenUpdateBeginToc});
 
-		$tokenUpdateEndParser->parse($toc->{_tokenUpdateEndOfAnchorNameBegin});
-		$tokenUpdateEndParser->parse($toc->{_tokenUpdateEndOfAnchorNameEnd});
-		$tokenUpdateEndParser->parse($toc->{_tokenUpdateEndNumber});
-		$tokenUpdateEndParser->parse($toc->{_tokenUpdateEndToc});
-	}
+	$tokenUpdateEndParser->parse($toc->{_tokenUpdateEndOfAnchorNameBegin});
+	$tokenUpdateEndParser->parse($toc->{_tokenUpdateEndOfAnchorNameEnd});
+	$tokenUpdateEndParser->parse($toc->{_tokenUpdateEndNumber});
+	$tokenUpdateEndParser->parse($toc->{_tokenUpdateEndToc});
+    }
 }  # _parseTocUpdateTokens()
 
 
@@ -213,28 +214,28 @@ sub _parseTocUpdateTokens {
 # function: Reset batch variables
 
 sub _resetBatchVariables {
-		# Get arguments
-	my ($self) = @_;
-		# Call ancestor
-	$self->SUPER::_resetBatchVariables();
-		# Arrays containing start, end, comment & text tokens which indicate
-		# the begin of ToC tokens.  The tokens are stored in keys of hashes to 
-		# avoid storing duplicates as an array would.
-	$self->{_tokensUpdateBegin} = [
-		[],	# ['<start tag>', <attributes>]
-		{},	# {'<end tag>' => ''}
-		{},	# {'<text>'    => ''}
-		{}		# {'<comment>' => ''}
-	];
-		# Arrays containing start, end, comment & text tokens which indicate
-		# the end of ToC tokens.  The tokens are stored in keys of hashes to 
-		# avoid storing duplicates as an array would.
-	$self->{_tokensUpdateEnd} = [
-		[],	# ['<start tag>', <attributes>]
-		{},	# {'<end tag>' => ''}
-		{},	# {'<text>'    => ''}
-		{}		# {'<comment>' => ''}
-	];
+	# Get arguments
+    my ($self) = @_;
+	# Call ancestor
+    $self->SUPER::_resetBatchVariables();
+	# Arrays containing start, end, comment & text tokens which indicate
+	# the begin of ToC tokens.  The tokens are stored in keys of hashes to 
+	# avoid storing duplicates as an array would.
+    $self->{_tokensUpdateBegin} = [
+	[], # ['<start tag>', <attributes>]
+	{}, # {'<end tag>' => ''}
+	{}, # {'<text>'    => ''}
+	{}	# {'<comment>' => ''}
+    ];
+	# Arrays containing start, end, comment & text tokens which indicate
+	# the end of ToC tokens.  The tokens are stored in keys of hashes to 
+	# avoid storing duplicates as an array would.
+    $self->{_tokensUpdateEnd} = [
+	[], # ['<start tag>', <attributes>]
+	{}, # {'<end tag>' => ''}
+	{}, # {'<text>'    => ''}
+	{}	# {'<comment>' => ''}
+    ];
 }  # _resetBatchVariables()
 
 
@@ -243,14 +244,14 @@ sub _resetBatchVariables {
 # args:     - aAnchorName: Name of anchor name to set active.
 
 sub _setActiveAnchorName {
-		# Get arguments
-	my ($self, $aAnchorName) = @_;
-		# Are tokens being deleted?
-	if (! $self->{_doDeleteTokens}) {
-		# No, tokens aren't being deleted;
-			# Call ancestor to set anchor name
-		$self->SUPER::_setActiveAnchorName($aAnchorName);
-	}
+	# Get arguments
+    my ($self, $aAnchorName) = @_;
+	# Are tokens being deleted?
+    if (! $self->{_doDeleteTokens}) {
+	# No, tokens aren't being deleted;
+	    # Call ancestor to set anchor name
+	$self->SUPER::_setActiveAnchorName($aAnchorName);
+    }
 }  # _setActiveAnchorName()
 
 
@@ -263,14 +264,14 @@ sub _setActiveAnchorName {
 # note:     Used internally.
 
 sub _update {
-		# Get arguments
-	my ($self, $aMode, $aToc, $aString, $aOptions) = @_;
-		# Initialize TocUpdator batch
-	$self->_initializeUpdatorBatch($aMode, $aToc, $aOptions);
-		# Start updating ToC by starting ToC insertion
-	$self->_insert($aString);
-		# Deinitialize TocUpdator batch
-	$self->_deinitializeUpdatorBatch();
+	# Get arguments
+    my ($self, $aMode, $aToc, $aString, $aOptions) = @_;
+	# Initialize TocUpdator batch
+    $self->_initializeUpdatorBatch($aMode, $aToc, $aOptions);
+	# Start updating ToC by starting ToC insertion
+    $self->_insert($aString);
+	# Deinitialize TocUpdator batch
+    $self->_deinitializeUpdatorBatch();
 }  # update()
 
 
@@ -283,14 +284,14 @@ sub _update {
 # note:     Used internally.
 
 sub _updateFile {
-		# Get arguments
-	my ($self, $aMode, $aToc, $aFile, $aOptions) = @_;
-		# Initialize TocUpdator batch
-	$self->_initializeUpdatorBatch($aMode, $aToc, $aOptions);
-		# Start updating ToC by starting ToC insertion
-	$self->_insertIntoFile($aFile);
-		# Deinitialize TocUpdator batch
-	$self->_deinitializeUpdatorBatch();
+	# Get arguments
+    my ($self, $aMode, $aToc, $aFile, $aOptions) = @_;
+	# Initialize TocUpdator batch
+    $self->_initializeUpdatorBatch($aMode, $aToc, $aOptions);
+	# Start updating ToC by starting ToC insertion
+    $self->_insertIntoFile($aFile);
+	# Deinitialize TocUpdator batch
+    $self->_deinitializeUpdatorBatch();
 }  # _updateFile()
 
 
@@ -299,14 +300,14 @@ sub _updateFile {
 # args:     - aOutput: scalar to write
 
 sub _writeOrBufferOutput {
-		# Get arguments
-	my ($self, $aOutput) = @_;
-		# Delete output?
-	if (! $self->{_doDeleteTokens}) {
-		# No, don't delete output;
-			# Call ancestor
-		$self->SUPER::_writeOrBufferOutput($aOutput);
-	}
+	# Get arguments
+    my ($self, $aOutput) = @_;
+	# Delete output?
+    if (! $self->{_doDeleteTokens}) {
+	# No, don't delete output;
+	    # Call ancestor
+	$self->SUPER::_writeOrBufferOutput($aOutput);
+    }
 }  # _writeOrBufferOutput()
 
 
@@ -316,20 +317,22 @@ sub _writeOrBufferOutput {
 #           - $aToc: Reference to ToC to which anchorname belongs.
 
 sub anchorNameBegin {
-		# Get arguments
-	my ($self, $aAnchorNameBegin, $aToc) = @_;
-		# Call ancestor
-	$self->SUPER::anchorNameBegin($aAnchorNameBegin);
-		# Must ToC be inserted or updated?
-	if ($self->{htu__Mode} != MODE_DO_NOTHING) {
-		# Yes, ToC must be inserted or updated;
-			# Surround anchor name with update tags
-		$self->{_outputPrefix} = 
-			$aToc->{_tokenUpdateBeginOfAnchorNameBegin} .
-			$self->{_outputPrefix} . 
-			$aToc->{_tokenUpdateEndOfAnchorNameBegin};
-	}
-}	# anchorNameBegin()
+	# Get arguments
+    my ($self, $aAnchorNameBegin, $aToc) = @_;
+	# Call ancestor
+    $self->SUPER::anchorNameBegin($aAnchorNameBegin);
+	# Must ToC be inserted or updated?
+    if ($self->{htu__Mode} != MODE_DO_NOTHING) {
+	# Yes, ToC must be inserted or updated;
+	    # Surround anchor name with update tags
+	if ($self->{_outputSuffix}) {
+	    $self->{_outputSuffix} = 
+		$aToc->{_tokenUpdateBeginOfAnchorNameBegin} .
+		$self->{_outputSuffix} . 
+		$aToc->{_tokenUpdateEndOfAnchorNameBegin};
+	} # if
+    } # if
+}   # anchorNameBegin()
 
 
 #--- HTML::TocUpdator::anchorNameEnd() ----------------------------------------
@@ -338,20 +341,22 @@ sub anchorNameBegin {
 #           - $aToc: Reference to ToC to which anchorname belongs.
 
 sub anchorNameEnd {
-		# Get arguments
-	my ($self, $aAnchorNameEnd, $aToc) = @_;
-		# Call ancestor
-	$self->SUPER::anchorNameEnd($aAnchorNameEnd);
-		# Must ToC be inserted or updated?
-	if ($self->{htu__Mode} != MODE_DO_NOTHING) {
-		# Yes, ToC must be inserted or updated;
-			# Surround anchor name with update tags
-		$self->{_outputSuffix} = 
-			$aToc->{_tokenUpdateBeginOfAnchorNameEnd} .
-			$self->{_outputSuffix} . 
-			$aToc->{_tokenUpdateEndOfAnchorNameEnd};
-	}
-}	# anchorNameEnd()
+	# Get arguments
+    my ($self, $aAnchorNameEnd, $aToc) = @_;
+	# Call ancestor
+    $self->SUPER::anchorNameEnd($aAnchorNameEnd);
+	# Must ToC be inserted or updated?
+    if ($self->{htu__Mode} != MODE_DO_NOTHING) {
+	# Yes, ToC must be inserted or updated;
+	    # Surround anchor name with update tags
+	if ($self->{_outputPrefix}) {
+	    $self->{_outputPrefix} = 
+		$aToc->{_tokenUpdateBeginOfAnchorNameEnd} .
+		$self->{_outputPrefix} . 
+		$aToc->{_tokenUpdateEndOfAnchorNameEnd};
+	} # if
+    } # if
+} # anchorNameEnd()
 
 
 #--- HTML::TocUpdator::comment() ----------------------------------------------
@@ -359,50 +364,50 @@ sub anchorNameEnd {
 # args:     - $aComment: comment text with '<!--' and '-->' tags stripped off.
 
 sub comment {
-		# Get arguments
-	my ($self, $aComment) = @_;
-		# Must ToC be updated?
-	if ($self->{htu__Mode} == MODE_DO_UPDATE) {
-		# Yes, ToC must be updated;
-			# Updator is currently deleting tokens?
-		if ($self->{_doDeleteTokens}) {
-			# Yes, tokens must be deleted;
-				# Call ancestor
-			$self->SUPER::comment($aComment);
+	# Get arguments
+    my ($self, $aComment) = @_;
+	# Must ToC be updated?
+    if ($self->{htu__Mode} == MODE_DO_UPDATE) {
+	# Yes, ToC must be updated;
+	    # Updator is currently deleting tokens?
+	if ($self->{_doDeleteTokens}) {
+	    # Yes, tokens must be deleted;
+		# Call ancestor
+	    $self->SUPER::comment($aComment);
 
-				# Look for update end token
+		# Look for update end token
 
-				# Does comment matches update end token?
-			if (defined(
-				$self->{_tokensUpdateEnd}[TUT_TOKENTYPE_COMMENT]{$aComment}
-			)) {
-				# Yes, comment matches update end token;
-					# Indicate to stop deleting tokens
-				$self->{_doDeleteTokens} = 0;
-			}
-		}
-		else {
-			# No, tokens mustn't be deleted;
-
-				# Look for update begin token
-
-				# Does comment matches update begin token?
-			if (defined(
-				$self->{_tokensUpdateBegin}[TUT_TOKENTYPE_COMMENT]{$aComment}
-			)) {
-				# Yes, comment matches update begin token;
-					# Indicate to start deleting tokens
-				$self->{_doDeleteTokens} = 1;
-			}
-				# Call ancestor
-			$self->SUPER::comment($aComment);
-		}
+		# Does comment matches update end token?
+	    if (defined(
+		$self->{_tokensUpdateEnd}[TUT_TOKENTYPE_COMMENT]{$aComment}
+	    )) {
+		# Yes, comment matches update end token;
+		    # Indicate to stop deleting tokens
+		$self->{_doDeleteTokens} = 0;
+	    }
 	}
 	else {
-		# No, ToC mustn't be updated;
-			# Call ancestor
-		$self->SUPER::comment($aComment);
+	    # No, tokens mustn't be deleted;
+
+		# Look for update begin token
+
+		# Does comment matches update begin token?
+	    if (defined(
+		$self->{_tokensUpdateBegin}[TUT_TOKENTYPE_COMMENT]{$aComment}
+	    )) {
+		# Yes, comment matches update begin token;
+		    # Indicate to start deleting tokens
+		$self->{_doDeleteTokens} = 1;
+	    }
+		# Call ancestor
+	    $self->SUPER::comment($aComment);
 	}
+    }
+    else {
+	# No, ToC mustn't be updated;
+	    # Call ancestor
+	$self->SUPER::comment($aComment);
+    }
 }  # comment()
 
 
@@ -412,26 +417,26 @@ sub comment {
 #           - $aOrigText: tag name including brackets.
 
 sub end {
-		# Get arguments
-	my ($self, $aTag, $aOrigText) = @_;
-		# Call ancestor
-	$self->SUPER::end($aTag, $aOrigText);
-		# Must ToC be updated?
-	if ($self->{htu__Mode} == MODE_DO_UPDATE) {
-		# Yes, ToC must be updated;
-			# Updator is currently deleting tokens?
-		if ($self->{_doDeleteTokens}) {
-			# Yes, tokens must be deleted;
-				# Does end tag matches update end token?
-			if (defined(
-				$self->{_tokensUpdateEnd}[TUT_TOKENTYPE_END]{$aTag}
-			)) {
-				# Yes, end tag matches update end token;
-					# Indicate to stop deleting tokens
-				$self->{_doDeleteTokens} = 0;
-			}
-		}
+	# Get arguments
+    my ($self, $aTag, $aOrigText) = @_;
+	# Call ancestor
+    $self->SUPER::end($aTag, $aOrigText);
+	# Must ToC be updated?
+    if ($self->{htu__Mode} == MODE_DO_UPDATE) {
+	# Yes, ToC must be updated;
+	    # Updator is currently deleting tokens?
+	if ($self->{_doDeleteTokens}) {
+	    # Yes, tokens must be deleted;
+		# Does end tag matches update end token?
+	    if (defined(
+		$self->{_tokensUpdateEnd}[TUT_TOKENTYPE_END]{$aTag}
+	    )) {
+		# Yes, end tag matches update end token;
+		    # Indicate to stop deleting tokens
+		$self->{_doDeleteTokens} = 0;
+	    }
 	}
+    }
 }  # end()
 
 
@@ -442,10 +447,10 @@ sub end {
 #           - $aOptions: optional updator options
 
 sub insert {
-		# Get arguments
-	my ($self, $aToc, $aString, $aOptions) = @_;
-		# Do start insert
-	$self->_update(MODE_DO_INSERT, $aToc, $aString, $aOptions);
+	# Get arguments
+    my ($self, $aToc, $aString, $aOptions) = @_;
+	# Do start insert
+    $self->_update(MODE_DO_INSERT, $aToc, $aString, $aOptions);
 }  # insert()
 
 
@@ -456,33 +461,31 @@ sub insert {
 #           - $aOptions: optional updator options
 
 sub insertIntoFile {
-		# Get arguments
-	my ($self, $aToc, $aFile, $aOptions) = @_;
-		# Do start insert
-	$self->_updateFile(MODE_DO_INSERT, $aToc, $aFile, $aOptions);
+	# Get arguments
+    my ($self, $aToc, $aFile, $aOptions) = @_;
+	# Do start insert
+    $self->_updateFile(MODE_DO_INSERT, $aToc, $aFile, $aOptions);
 }  # insertIntoFile()
 
 
-#--- HTML::TocUpdator::number() -----------------------------------------------
+#--- HTML::TocUpdator::formatNumber() ----------------------------------
 # function: Process heading number generated by HTML::Toc.
 # args:     - $aNumber
 #           - $aToc: Reference to ToC to which anchorname belongs.
 
-sub number {
-		# Get arguments
-	my ($self, $aNumber, $aToc) = @_;
-		# Call ancestor
-	$self->SUPER::number($aNumber);
-		# Must ToC be inserted or updated?
-	if ($self->{htu__Mode} != MODE_DO_NOTHING) {
-		# Yes, ToC must be inserted or updated;
-			# Surround number with update tags
-		$self->{_outputSuffix} = 
-			$aToc->{_tokenUpdateBeginNumber} .
-			$self->{_outputSuffix} . 
-			$aToc->{_tokenUpdateEndNumber};
-	}
-}	# number()
+sub formatNumber {
+	# Get arguments
+    my ($self, $aNumber, $aToc) = @_;
+	# Call ancestor
+    my $result = $self->SUPER::formatNumber($aNumber, $aToc);
+	# Must ToC be inserted or updated?
+    if ($self->{htu__Mode} != MODE_DO_NOTHING) {
+	# Yes, ToC must be inserted or updated;
+	    # Surround number with update tags
+      $result = $aToc->{_tokenUpdateBeginNumber} . $result . $aToc->{_tokenUpdateEndNumber};
+    } # if
+   return $result;
+}   # formatNumber()
 
 
 #--- HTML::TocUpdator::start() ------------------------------------------------
@@ -495,22 +498,22 @@ sub number {
 #           - $aOrigText: the original HTML text
 
 sub start {
-		# Get arguments
-	my ($self, $aTag, $aAttr, $aAttrSeq, $aOrigText) = @_;
-		# Must ToC be updated?
-	if ($self->{htu__Mode} == MODE_DO_UPDATE) {
-		# Yes, ToC must be updated;
-			# Does start tag matches token update begin tag?
-		if (HTML::TocUpdator::_doesTagExistInArray(
-			$aTag, $aAttr, $self->{_tokensUpdateBegin}[TUT_TOKENTYPE_START]
-		)) {
-			# Yes, start tag matches token update tag;
-				# Indicate to delete tokens
-			$self->{_doDeleteTokens} = 1;
-		}
+	# Get arguments
+    my ($self, $aTag, $aAttr, $aAttrSeq, $aOrigText) = @_;
+	# Must ToC be updated?
+    if ($self->{htu__Mode} == MODE_DO_UPDATE) {
+	# Yes, ToC must be updated;
+	    # Does start tag matches token update begin tag?
+	if (HTML::TocUpdator::_doesTagExistInArray(
+	    $aTag, $aAttr, $self->{_tokensUpdateBegin}[TUT_TOKENTYPE_START]
+	)) {
+	    # Yes, start tag matches token update tag;
+		# Indicate to delete tokens
+	    $self->{_doDeleteTokens} = 1;
 	}
-		# Let ancestor process the start tag
-	$self->SUPER::start($aTag, $aAttr, $aAttrSeq, $aOrigText);
+    }
+	# Let ancestor process the start tag
+    $self->SUPER::start($aTag, $aAttr, $aAttrSeq, $aOrigText);
 }  # start()
 
 
@@ -522,17 +525,17 @@ sub start {
 #           build is inserted.
 
 sub toc {
-		# Get arguments
-	my ($self, $aScenario, $aToc) = @_;
+	# Get arguments
+    my ($self, $aScenario, $aToc) = @_;
 
-		# Surround toc with update tokens
+	# Surround toc with update tokens
 
-		# Add update begin token
-	push(@$aScenario, \$aToc->{_tokenUpdateBeginToc});
-		# Call ancestor
-	$self->SUPER::toc($aScenario, $aToc);
-		# Add update end token
-	push(@$aScenario, \$aToc->{_tokenUpdateEndToc});
+	# Add update begin token
+    push(@$aScenario, \$aToc->{_tokenUpdateBeginToc});
+	# Call ancestor
+    $self->SUPER::toc($aScenario, $aToc);
+	# Add update end token
+    push(@$aScenario, \$aToc->{_tokenUpdateEndToc});
 }  # toc()
 
 
@@ -542,14 +545,14 @@ sub toc {
 #           - $aToc: ToC to add text to.
 
 sub _processTocText {
-		# Get arguments
-	my ($self, $aText, $aToc) = @_;
-		# Delete output?
-	if (! $self->{_doDeleteTokens}) {
-		# No, don't delete output;
-			# Call ancestor
-		$self->SUPER::_processTocText($aText, $aToc);
-	}
+	# Get arguments
+    my ($self, $aText, $aToc) = @_;
+	# Delete output?
+    if (! $self->{_doDeleteTokens}) {
+	# No, don't delete output;
+	    # Call ancestor
+	$self->SUPER::_processTocText($aText, $aToc);
+    }
 }  # _processTocText()
 
 
@@ -560,10 +563,10 @@ sub _processTocText {
 #           - $aOptions: optional updator options
 
 sub update {
-		# Get arguments
-	my ($self, $aToc, $aString, $aOptions) = @_;
-		# Do start update
-	$self->_update(MODE_DO_UPDATE, $aToc, $aString, $aOptions);
+	# Get arguments
+    my ($self, $aToc, $aString, $aOptions) = @_;
+	# Do start update
+    $self->_update(MODE_DO_UPDATE, $aToc, $aString, $aOptions);
 }  # update()
 
 
@@ -574,10 +577,10 @@ sub update {
 #           - $aOptions: optional updator options
 
 sub updateFile {
-		# Get arguments
-	my ($self, $aToc, $aFile, $aOptions) = @_;
-		# Do start update
-	$self->_updateFile(MODE_DO_UPDATE, $aToc, $aFile, $aOptions);
+	# Get arguments
+    my ($self, $aToc, $aFile, $aOptions) = @_;
+	# Do start update
+    $self->_updateFile(MODE_DO_UPDATE, $aToc, $aFile, $aOptions);
 }  # update()
 
 
@@ -592,9 +595,9 @@ package HTML::_TokenUpdateParser;
 
 
 BEGIN {
-	use vars qw(@ISA);
+    use vars qw(@ISA);
 
-	@ISA = qw(HTML::Parser);
+    @ISA = qw(HTML::Parser);
 }
 
 END {}
@@ -604,14 +607,14 @@ END {}
 # function: Constructor
 
 sub new {
-		# Get arguments
-	my ($aType, $aTokenArray) = @_;
-		# Create instance
-	my $self = $aType->SUPER::new;
-		# Reference token array
-	$self->{tokens} = $aTokenArray;
-		# Return instance
-	return $self;
+	# Get arguments
+    my ($aType, $aTokenArray) = @_;
+	# Create instance
+    my $self = $aType->SUPER::new;
+	# Reference token array
+    $self->{tokens} = $aTokenArray;
+	# Return instance
+    return $self;
 }  # new()
 
 
@@ -620,10 +623,10 @@ sub new {
 # args:     - $aComment: comment text with '<!--' and '-->' tags stripped off.
 
 sub comment {
-		# Get arguments
-	my ($self, $aComment) = @_;
-		# Add token to array of update tokens
-	$self->{tokens}[HTML::TocUpdator::TUT_TOKENTYPE_COMMENT]{$aComment} = '';
+	# Get arguments
+    my ($self, $aComment) = @_;
+	# Add token to array of update tokens
+    $self->{tokens}[HTML::TocUpdator::TUT_TOKENTYPE_COMMENT]{$aComment} = '';
 }  # comment()
 
 
@@ -633,10 +636,10 @@ sub comment {
 # args:     - $aTag: tag name (in lower case).
 
 sub end {
-		# Get arguments
-	my ($self, $aTag, $aOrigText) = @_;
-		# Add token to array of update tokens
-	$self->{tokens}[HTML::TocUpdator::TUT_TOKENTYPE_END]{$aTag} = '';
+	# Get arguments
+    my ($self, $aTag, $aOrigText) = @_;
+	# Add token to array of update tokens
+    $self->{tokens}[HTML::TocUpdator::TUT_TOKENTYPE_END]{$aTag} = '';
 }  # end()
 
 
@@ -645,10 +648,10 @@ sub end {
 # args:     - $aToken: 'update token' to parse
 
 sub parse {
-		# Get arguments
-	my ($self, $aString) = @_;
-		# Call ancestor
-	$self->SUPER::parse($aString);
+	# Get arguments
+    my ($self, $aString) = @_;
+	# Call ancestor
+    $self->SUPER::parse($aString);
 }  # parse()
 
 
@@ -662,19 +665,19 @@ sub parse {
 #           - $aOrigText: the original HTML text
 
 sub start {
-		# Get arguments
-	my ($self, $aTag, $aAttr, $aAttrSeq, $aOrigText) = @_;
-		# Does token exist in array?
-	if (! HTML::TocUpdator::_doesTagExistInArray(
-		$aTag, $aAttr, $self->{tokens}[HTML::TocUpdator::TUT_TOKENTYPE_START]
-	)) {
-		# No, token doesn't exist in array;
-			# Add token to array of update tokens
-		push(
-			@{$self->{tokens}[HTML::TocUpdator::TUT_TOKENTYPE_START]},
-			[$aTag, $aAttr]
-		);
-	}
+	# Get arguments
+    my ($self, $aTag, $aAttr, $aAttrSeq, $aOrigText) = @_;
+	# Does token exist in array?
+    if (! HTML::TocUpdator::_doesTagExistInArray(
+	$aTag, $aAttr, $self->{tokens}[HTML::TocUpdator::TUT_TOKENTYPE_START]
+    )) {
+	# No, token doesn't exist in array;
+	    # Add token to array of update tokens
+	push(
+	    @{$self->{tokens}[HTML::TocUpdator::TUT_TOKENTYPE_START]},
+	    [$aTag, $aAttr]
+	);
+    }
 }  # start()
 
 
@@ -683,10 +686,10 @@ sub start {
 # args:     - @_: array containing data.
 
 sub text {
-		# Get arguments
-	my ($self, $aText) = @_;
-		# Add token to array of update tokens
-	$self->{tokens}[HTML::TocUpdator::TUT_TOKENTYPE_TEXT]{$aText} = '';
+	# Get arguments
+    my ($self, $aText) = @_;
+	# Add token to array of update tokens
+    $self->{tokens}[HTML::TocUpdator::TUT_TOKENTYPE_TEXT]{$aText} = '';
 }  # text()
 
 

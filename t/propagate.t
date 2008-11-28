@@ -28,8 +28,8 @@ BEGIN {
 		# Create test file
 	$filename = "file$$.htm";
 	die "$filename is already there" if -e $filename;
-	open(FILE, ">$filename") || die "Can't create $filename: $!";
-	print FILE <<'EOT'; close(FILE);
+	open my $file, ">:raw:utf8", $filename or die "Can't create $filename: $!";
+	print $file <<'EOT'; close $file;
 <h1>Header</h1>
 EOT
 }
@@ -44,13 +44,13 @@ END {
 #--- 1. propagate -------------------------------------------------------------
 
 $tocInsertor->insert($toc, "<h1>Header</h1>", {'output' => \$output});
-ok($output, "<ul>\n<li>Header\n</ul><h1>Header</h1>");
+ok($output, "<ul>\n<li>Header</li>\n</ul><h1>Header</h1>");
 
 
 #--- 2. propagateFile ---------------------------------------------------------
 
 $tocInsertor->insertIntoFile($toc, $filename, {'output' => \$output});
-ok($output, "<ul>\n<li>Header\n</ul><h1>Header</h1>\n");
+ok($output, "<ul>\n<li>Header</li>\n</ul><h1>Header</h1>\n");
 
 
 #--- 3. doLinkToToken -----------------------------------------------------
@@ -59,8 +59,8 @@ $toc->setOptions({'doLinkToToken' => 1});
 $tocInsertor->insert($toc, "<h1>Header</h1>", {'output' => \$output});
 ok("$output\n", <<'EOT');
 <ul>
-<li><a href=#h-1>Header</a>
-</ul><a name=h-1><h1>Header</h1></a>
+<li><a href="#h-1">Header</a></li>
+</ul><h1><a name="h-1"></a>Header</h1>
 EOT
 
 
@@ -70,7 +70,7 @@ $toc->setOptions(
 	{'templateAnchorHrefBegin' => '"<$node${file}test${groupId}>"'}
 );
 $tocInsertor->insertIntoFile($toc, $filename, {'output' => \$output});
-ok($output, "<ul>\n<li><1${filename}testh>Header</a>\n</ul><a name=h-1><h1>Header</h1></a>\n");
+ok($output, "<ul>\n<li><1${filename}testh>Header</a></li>\n</ul><h1><a name=\"h-1\"></a>Header</h1>\n");
 $toc->setOptions({'templateAnchorHrefBegin' => undef});
 
 
@@ -81,7 +81,7 @@ $toc->setOptions({
 	'templateAnchorNameBegin' => '"<$anchorName>"'
 });
 $tocInsertor->insert($toc, "<h1>Header</h1>", {'output' => \$output});
-ok($output, "<ul>\n<li><a href=#1h>Header</a>\n</ul><1h><h1>Header</h1></a>");
+ok($output, "<ul>\n<li><a href=\"#1h\">Header</a></li>\n</ul><h1><1h>Header</h1>");
 $toc->setOptions({'templateAnchorName' => undef});
 
 
@@ -99,7 +99,7 @@ $toc->setOptions({'templateAnchorNameBegin' => \&AssembleAnchorName});
 	# Propagate ToC
 $tocInsertor->insert($toc, "<h1>Header</h1>", {'output' => \$output});
 	# Test ToC
-ok($output, "<ul>\n<li><a href=#h-1>Header</a>\n</ul>h11<h1>Header</h1></a>");
+ok($output, "<ul>\n<li><a href=\"#h-1\">Header</a></li>\n</ul><h1>h11Header</h1>");
 	# Restore options
 $toc->setOptions({'templateAnchorNameBegin' => undef});
 
@@ -109,11 +109,11 @@ $toc->setOptions({'templateAnchorNameBegin' => undef});
 	# Set options
 $toc->setOptions({'doNumberToken' => 1});
 $tocInsertor->insert($toc, "<h1>Header</h1>", {'output' => \$output});
-ok("$output\n", <<'EOT');
+ok("$output\n", <<HTML);
 <ul>
-<li><a href=#h-1>Header</a>
-</ul><a name=h-1><h1>1 &nbsp;Header</h1></a>
-EOT
+<li><a href="#h-1">Header</a></li>
+</ul><h1><a name="h-1"></a>1 &nbsp;Header</h1>
+HTML
 	# Reset options
 $toc->setOptions({
 	'templateTokenNumber' => undef,
@@ -133,8 +133,8 @@ $tocInsertor->insert($toc, "<h1>Header</h1>", {'output' => \$output});
 	# Test ToC
 ok("$output\n", <<'EOT');
 <ul>
-<li><a href=#h-1>Header</a>
-</ul><a name=h-1><h1>-1-Header</h1></a>
+<li><a href="#h-1">Header</a></li>
+</ul><h1><a name="h-1"></a>-1-Header</h1>
 EOT
 	# Reset options
 $toc->setOptions({
@@ -159,8 +159,8 @@ $tocInsertor->insert($toc, "<h1>Header</h1>", {'output' => \$output});
 	# Test ToC
 ok("$output\n", <<'EOT');
 <ul>
-<li><a href=#h-a>Header</a>
-</ul><a name=h-a><h1>a &nbsp;Header</h1></a>
+<li><a href="#h-a">Header</a></li>
+</ul><h1><a name="h-a"></a>a &nbsp;Header</h1>
 EOT
 	# Reset options
 $toc->setOptions({

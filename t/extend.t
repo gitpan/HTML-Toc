@@ -46,7 +46,7 @@ $tocGenerator->generate($toc, "<h1>Header</h1>");
 	# Extend ToC
 $tocGenerator->extend($toc, "<h1>Header</h1>");
 	# Test ToC
-ok($toc->format(), "<ul>\n<li>Header\n<li>Header\n</ul>");
+ok($toc->format(), "<ul>\n<li>Header</li>\n<li>Header</li>\n</ul>");
 
 
 #--- 2. extendFromFile --------------------------------------------------------
@@ -56,7 +56,7 @@ $tocGenerator->generateFromFile($toc, $filename);
 	# Extend ToC
 $tocGenerator->extendFromFile($toc, $filename);
 	# Test ToC
-ok($toc->format(), "<ul>\n<li>Header\n<li>Header\n</ul>");
+ok($toc->format(), "<ul>\n<li>Header</li>\n<li>Header</li>\n</ul>");
 
 
 #--- 3. extendFromFiles -------------------------------------------------------
@@ -66,7 +66,7 @@ $tocGenerator->generateFromFile($toc, $filename);
 	# Extend ToC
 $tocGenerator->extendFromFile($toc, [$filename, $filename]);
 	# Test ToC
-ok($toc->format(), "<ul>\n<li>Header\n<li>Header\n<li>Header\n</ul>");
+ok($toc->format(), "<ul>\n<li>Header</li>\n<li>Header</li>\n<li>Header</li>\n</ul>");
 
 
 #--- 4. linkTocToToken --------------------------------------------------------
@@ -81,7 +81,7 @@ $tocGenerator->extend($toc, "<h1>Header</h1>");
 	# Test ToC
 ok($toc->format() . "\n", <<'EOT');
 <ul>
-<li><a href=#h-1>Header</a>
-<li><a href=#h-2>Header</a>
+<li><a href="#h-1">Header</a></li>
+<li><a href="#h-2">Header</a></li>
 </ul>
 EOT

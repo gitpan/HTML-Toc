@@ -27,8 +27,8 @@ BEGIN {
 		# Create test file
 	$filename = "file$$.htm";
 	die "$filename is already there" if -e $filename;
-	open(FILE, ">$filename") || die "Can't create $filename: $!";
-	print FILE <<'EOT'; close(FILE);
+	open my $file, ">:raw:utf8", $filename or die "Can't create $filename: $!";
+	print $file <<'EOT'; close $file;
 <h1>Header</h1>
 EOT
 }
@@ -43,22 +43,22 @@ END {
 #--- 1. update ----------------------------------------------------------------
 
 $tocUpdator->update($toc, "<h1>Header</h1>", {'output' => \$output});
-ok("$output\n", <<'EOT');
+ok("$output\n", <<HTML);
 <!-- #BeginToc --><ul>
-<li><a href=#h-1>Header</a>
-</ul><!-- #EndToc --><!-- #BeginTocAnchorNameBegin --><a name=h-1><!-- #EndTocAnchorNameBegin --><h1><!-- #BeginTocNumber -->1 &nbsp;<!-- #EndTocNumber -->Header</h1><!-- #BeginTocAnchorNameEnd --></a><!-- #EndTocAnchorNameEnd -->
-EOT
+<li><a href="#h-1">Header</a></li>
+</ul><!-- #EndToc --><h1><!-- #BeginTocAnchorNameBegin --><a name="h-1"></a><!-- #EndTocAnchorNameBegin --><!-- #BeginTocNumber -->1 &nbsp;<!-- #EndTocNumber -->Header</h1>
+HTML
 
 #--- 2. updateFile ------------------------------------------------------------
 
 $tocUpdator->updateFile($toc, $filename, {'output' => \$output});
 	open(FILE, ">a.out1") || die "Can't create a.out1: $!";
 	print FILE $output; close(FILE);
-$output2 = <<'EOT';
+$output2 = <<HTML;
 <!-- #BeginToc --><ul>
-<li><a href=#h-1>Header</a>
-</ul><!-- #EndToc --><!-- #BeginTocAnchorNameBegin --><a name=h-1><!-- #EndTocAnchorNameBegin --><h1><!-- #BeginTocNumber -->1 &nbsp;<!-- #EndTocNumber -->Header</h1><!-- #BeginTocAnchorNameEnd --></a><!-- #EndTocAnchorNameEnd -->
-EOT
+<li><a href="#h-1">Header</a></li>
+</ul><!-- #EndToc --><h1><!-- #BeginTocAnchorNameBegin --><a name="h-1"></a><!-- #EndTocAnchorNameBegin --><!-- #BeginTocNumber -->1 &nbsp;<!-- #EndTocNumber -->Header</h1>
+HTML
 	open(FILE, ">a.out2") || die "Can't create a.out2: $!";
 	print FILE $output2; close(FILE);
 ok($output, $output2);
@@ -67,20 +67,20 @@ ok($output, $output2);
 #--- 3. insert ----------------------------------------------------------------
 
 $tocUpdator->insert($toc, "<h1>Header</h1>", {'output' => \$output});
-ok("$output\n", <<'EOT');
+ok("$output\n", <<HTML);
 <!-- #BeginToc --><ul>
-<li><a href=#h-1>Header</a>
-</ul><!-- #EndToc --><!-- #BeginTocAnchorNameBegin --><a name=h-1><!-- #EndTocAnchorNameBegin --><h1><!-- #BeginTocNumber -->1 &nbsp;<!-- #EndTocNumber -->Header</h1><!-- #BeginTocAnchorNameEnd --></a><!-- #EndTocAnchorNameEnd -->
-EOT
+<li><a href="#h-1">Header</a></li>
+</ul><!-- #EndToc --><h1><!-- #BeginTocAnchorNameBegin --><a name="h-1"></a><!-- #EndTocAnchorNameBegin --><!-- #BeginTocNumber -->1 &nbsp;<!-- #EndTocNumber -->Header</h1>
+HTML
 
 #--- 4. insertIntoFile --------------------------------------------------------
 
 $tocUpdator->insertIntoFile($toc, $filename, {'output' => \$output});
-ok($output, <<'EOT');
+ok($output, <<HTML);
 <!-- #BeginToc --><ul>
-<li><a href=#h-1>Header</a>
-</ul><!-- #EndToc --><!-- #BeginTocAnchorNameBegin --><a name=h-1><!-- #EndTocAnchorNameBegin --><h1><!-- #BeginTocNumber -->1 &nbsp;<!-- #EndTocNumber -->Header</h1><!-- #BeginTocAnchorNameEnd --></a><!-- #EndTocAnchorNameEnd -->
-EOT
+<li><a href="#h-1">Header</a></li>
+</ul><!-- #EndToc --><h1><!-- #BeginTocAnchorNameBegin --><a name="h-1"></a><!-- #EndTocAnchorNameBegin --><!-- #BeginTocNumber -->1 &nbsp;<!-- #EndTocNumber -->Header</h1>
+HTML
 
 
 #--- 5. update twice ----------------------------------------------------------
@@ -89,14 +89,16 @@ $tocUpdator->update($toc, "<h1>Header</h1>", {'output' => \$output});
 $tocUpdator->update($toc, $output, {'output' => \$output2});
 ok("$output\n", <<'EOT');
 <!-- #BeginToc --><ul>
-<li><a href=#h-1>Header</a>
-</ul><!-- #EndToc --><!-- #BeginTocAnchorNameBegin --><a name=h-1><!-- #EndTocAnchorNameBegin --><h1><!-- #BeginTocNumber -->1 &nbsp;<!-- #EndTocNumber -->Header</h1><!-- #BeginTocAnchorNameEnd --></a><!-- #EndTocAnchorNameEnd -->
+<li><a href="#h-1">Header</a></li>
+</ul><!-- #EndToc --><h1><!-- #BeginTocAnchorNameBegin --><a name="h-1"></a><!-- #EndTocAnchorNameBegin --><!-- #BeginTocNumber -->1 &nbsp;<!-- #EndTocNumber -->Header</h1>
 EOT
 
 
 #--- 6. tokens update begin & end ---------------------------------------------
 
 $toc->setOptions({
+	'templateAnchorNameBegin'           => '"<a name>"',
+	'templateAnchorNameEnd'             => '"</a>"',
 	'tokenUpdateBeginOfAnchorNameBegin' => '<tocAnchorNameBegin>',
 	'tokenUpdateEndOfAnchorNameBegin'   => '</tocAnchorNameBegin>',
 	'tokenUpdateBeginOfAnchorNameEnd'   => '<tocAnchorNameEnd>',
@@ -107,8 +109,8 @@ $toc->setOptions({
 	'tokenUpdateEndToc',                => '</toc>'
 });
 $tocUpdator->update($toc, "<h1>Header</h1>", {'output' => \$output});
-ok("$output\n", <<'EOT');
+ok("$output\n", <<HTML);
 <toc><ul>
-<li><a href=#h-1>Header</a>
-</ul></toc><tocAnchorNameBegin><a name=h-1></tocAnchorNameBegin><h1><tocNumber>1 &nbsp;</tocNumber>Header</h1><tocAnchorNameEnd></a></tocAnchorNameEnd>
-EOT
+<li><a href="#h-1">Header</a></li>
+</ul></toc><h1><tocAnchorNameBegin><a name></tocAnchorNameBegin><tocNumber>1 &nbsp;</tocNumber>Header<tocAnchorNameEnd></a></tocAnchorNameEnd></h1>
+HTML

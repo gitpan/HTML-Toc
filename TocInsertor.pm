@@ -10,20 +10,19 @@ package HTML::TocInsertor;
 
 
 use strict;
-use FileHandle;
 use HTML::TocGenerator;
 
 
 BEGIN {
-	use vars qw(@ISA $VERSION);
+    use vars qw(@ISA $VERSION);
 
-	$VERSION = '0.91';
+    $VERSION = '1.00';
 
-	@ISA = qw(HTML::TocGenerator);
+    @ISA = qw(HTML::TocGenerator);
 }
 
-	# TocInsertionPoint (TIP) constants
-	
+    # TocInsertionPoint (TIP) constants
+    
 use constant TIP_PREPOSITION_REPLACE => 'replace';
 use constant TIP_PREPOSITION_BEFORE  => 'before';
 use constant TIP_PREPOSITION_AFTER   => 'after';
@@ -45,19 +44,23 @@ END {}
 # function: Constructor.
 
 sub new {
-		# Get arguments
-	my ($aType) = @_;
-	my $self = $aType->SUPER::new;
-		# TRUE if insertion point token must be output, FALSE if not
-	$self->{_doOutputInsertionPointToken} = 1;
-		# Reset batch variables
-	$self->_resetBatchVariables;
-		# Bias to not insert ToC
-	$self->{hti__Mode} = MODE_DO_NOTHING;
+	# Get arguments
+    my ($aType) = @_;
+    my $self = $aType->SUPER::new;
+	# TRUE if insertion point token must be output, FALSE if not
+    $self->{_doOutputInsertionPointToken} = 1;
+	# True if anchor name is being written to output
+    $self->{_writingAnchorName} = 0;
+	# True if anchor name-begin is being written to output
+    $self->{_writingAnchorNameBegin} = 0;
+	# Reset batch variables
+    $self->_resetBatchVariables;
+	# Bias to not insert ToC
+    $self->{hti__Mode} = MODE_DO_NOTHING;
 
-		# TODO: Initialize output
+	# TODO: Initialize output
 
-	return $self;
+    return $self;
 }  # new()
 
 
@@ -65,56 +68,57 @@ sub new {
 # function: Deinitialize output.
 
 sub _deinitializeOutput {
-		# Get arguments
-	my ($self) = @_;
-		# Filehandle is defined?
-	if (defined($self->{_outputFileHandle})) {
-		# Yes, filehandle is defined;
-			# Restore selected filehandle
-		select($self->{_oldFileHandle});
-			# Undefine filehandle, closing it automatically
-		undef $self->{_outputFileHandle};
-	}
+	# Get arguments
+    my ($self) = @_;
+	# Filehandle is defined?
+    if (defined($self->{_outputFileHandle})) {
+	# Yes, filehandle is defined;
+	    # Restore selected filehandle
+	select($self->{_oldFileHandle});
+	    # Undefine filehandle, closing it automatically
+	undef $self->{_outputFileHandle};
+    }
 }  # _deinitializeOutput()
+
 
 
 #--- HTML::TocInsertor::_initializeOutput() -----------------------------------
 # function: Initialize output.
 
 sub _initializeOutput {
-		# Get arguments
-	my ($self) = @_;
-		# Bias to write to outputfile
-	my $doOutputToFile = 1;
+	# Get arguments
+    my ($self) = @_;
+	# Bias to write to outputfile
+    my $doOutputToFile = 1;
 
-		# Is output specified?
-	if (defined($self->{options}{'output'})) {
-		# Yes, output is specified;
-			# Indicate to not output to outputfile
-		$doOutputToFile = 0;
-			# Alias output reference
-		$self->{_output} = $self->{options}{'output'};
-			# Clear output
-		${$self->{_output}} = "";
-	}
+	# Is output specified?
+    if (defined($self->{options}{'output'})) {
+	# Yes, output is specified;
+	    # Indicate to not output to outputfile
+	$doOutputToFile = 0;
+	    # Alias output reference
+	$self->{_output} = $self->{options}{'output'};
+	    # Clear output
+	${$self->{_output}} = "";
+    }
 
-		# Is output file specified?
-	if (defined($self->{options}{'outputFile'})) {
-		# Yes, output file is specified;
-			# Indicate to output to outputfile
-		$doOutputToFile = 1;
-			# Open file
-		$self->{_outputFileHandle} = 
-			new FileHandle ">" . $self->{options}{'outputFile'};
+	# Is output file specified?
+    if (defined($self->{options}{'outputFile'})) {
+	# Yes, output file is specified;
+	    # Indicate to output to outputfile
+	$doOutputToFile = 1;
+	    # Open file
+	open $self->{_outputFileHandle}, ">:raw:utf8", $self->{options}{'outputFile'} 
+	    or die "Can't create $self->{options}{'outputFile'}: $!";
 
-			# Backup currently selected filehandle
-		$self->{_oldFileHandle} = select;
-			# Set new default filehandle
-		select($self->{_outputFileHandle});
-	}
+	    # Backup currently selected filehandle
+	$self->{_oldFileHandle} = select;
+	    # Set new default filehandle
+	select($self->{_outputFileHandle});
+    }
 
-		# Alias output-to-file indicator
-	$self->{_doOutputToFile} = $doOutputToFile;
+	# Alias output-to-file indicator
+    $self->{_doOutputToFile} = $doOutputToFile;
 }  # _initializeOutput()
 
 
@@ -122,29 +126,29 @@ sub _initializeOutput {
 # function: Deinitialize insertor batch.
 
 sub _deinitializeInsertorBatch {
-		# Get arguments
-	my ($self) = @_;
-		# Indicate ToC insertion has finished
-	$self->{_isTocInsertionPointPassed} = 0;
-		# Write buffered output
-	$self->_writeBufferedOutput();
-		# Propagate?
-	if ($self->{hti__Mode} == MODE_DO_PROPAGATE) {
-		# Yes, propagate;
-			# Deinitialize generator batch
-		$self->_deinitializeGeneratorBatch();
-	}
-	else {
-		# No, insert only;
-			# Do general batch deinitialization
-		$self->_deinitializeBatch();
-	}
-		# Deinitialize output
-	$self->_deinitializeOutput();
-		# Indicate end of batch
-	$self->{hti__Mode} = MODE_DO_NOTHING;
-		# Reset batch variables
-	$self->_resetBatchVariables();
+	# Get arguments
+    my ($self) = @_;
+	# Indicate ToC insertion has finished
+    $self->{_isTocInsertionPointPassed} = 0;
+	# Write buffered output
+    $self->_writeBufferedOutput();
+	# Propagate?
+    if ($self->{hti__Mode} == MODE_DO_PROPAGATE) {
+	# Yes, propagate;
+	    # Deinitialize generator batch
+	$self->_deinitializeGeneratorBatch();
+    }
+    else {
+	# No, insert only;
+	    # Do general batch deinitialization
+	$self->_deinitializeBatch();
+    }
+	# Deinitialize output
+    $self->_deinitializeOutput();
+	# Indicate end of batch
+    $self->{hti__Mode} = MODE_DO_NOTHING;
+	# Reset batch variables
+    $self->_resetBatchVariables();
 }  # _deinitializeInsertorBatch()
 
 
@@ -154,36 +158,36 @@ sub _deinitializeInsertorBatch {
 #           - $aOptions: optional options
 
 sub _initializeInsertorBatch {
-		# Get arguments
-	my ($self, $aTocs, $aOptions) = @_;
-		# Add invocation options
-	$self->setOptions($aOptions);
-		# Option 'doGenerateToc' specified?
-	if (!defined($self->{options}{'doGenerateToc'})) {
-		# No, options 'doGenerateToc' not specified;
-			# Default to 'doGenerateToc'
-		$self->{options}{'doGenerateToc'} = 1;
-	}
-		# Propagate?
-	if ($self->{options}{'doGenerateToc'}) {
-		# Yes, propagate;
-			# Indicate mode
-		$self->{hti__Mode} = MODE_DO_PROPAGATE;
-			# Initialize generator batch
-			# NOTE: This method takes care of calling '_initializeBatch()'
-		$self->_initializeGeneratorBatch($aTocs);
-	}
-	else {
-		# No, insert;
-			# Indicate mode
-		$self->{hti__Mode} = MODE_DO_INSERT;
-			# Do general batch initialization
-		$self->_initializeBatch($aTocs);
-	}
-		# Initialize output
-	$self->_initializeOutput();
-		# Parse ToC insertion points
-	$self->_parseTocInsertionPoints();
+	# Get arguments
+    my ($self, $aTocs, $aOptions) = @_;
+	# Add invocation options
+    $self->setOptions($aOptions);
+	# Option 'doGenerateToc' specified?
+    if (!defined($self->{options}{'doGenerateToc'})) {
+	# No, options 'doGenerateToc' not specified;
+	    # Default to 'doGenerateToc'
+	$self->{options}{'doGenerateToc'} = 1;
+    }
+	# Propagate?
+    if ($self->{options}{'doGenerateToc'}) {
+	# Yes, propagate;
+	    # Indicate mode
+	$self->{hti__Mode} = MODE_DO_PROPAGATE;
+	    # Initialize generator batch
+	    # NOTE: This method takes care of calling '_initializeBatch()'
+	$self->_initializeGeneratorBatch($aTocs);
+    }
+    else {
+	# No, insert;
+	    # Indicate mode
+	$self->{hti__Mode} = MODE_DO_INSERT;
+	    # Do general batch initialization
+	$self->_initializeBatch($aTocs);
+    }
+	# Initialize output
+    $self->_initializeOutput();
+	# Parse ToC insertion points
+    $self->_parseTocInsertionPoints();
 }  # _initializeInsertorBatch()
 
 
@@ -193,21 +197,21 @@ sub _initializeInsertorBatch {
 # note:     Used internally.
 
 sub _insert {
-		# Get arguments
-	my ($self, $aString) = @_;
-		# Propagate?
-	if ($self->{options}{'doGenerateToc'}) {
-		# Yes, propagate;
-			# Generate & insert ToC
-		$self->_generate($aString);
-	}
-	else {
-		# No, just insert ToC
-			# Insert by parsing file
-		$self->parse($aString);
-			# Flush remaining buffered text
-		$self->eof();
-	}
+	# Get arguments
+    my ($self, $aString) = @_;
+	# Propagate?
+    if ($self->{options}{'doGenerateToc'}) {
+	# Yes, propagate;
+	    # Generate & insert ToC
+	$self->_generate($aString);
+    }
+    else {
+	# No, just insert ToC
+	    # Insert by parsing file
+	$self->parse($aString);
+	    # Flush remaining buffered text
+	$self->eof();
+    }
 }  # _insert()
 
 
@@ -220,26 +224,26 @@ sub _insert {
 # note:     Used internally.
 
 sub _insertIntoFile {
-		# Get arguments
-	my ($self, $aFile) = @_;
-		# Local variables;
-	my ($file, @files);
-		# Dereference array reference or make array of file specification
-	@files = (ref($aFile) =~ m/ARRAY/) ? @$aFile : ($aFile);
-		# Loop through files
-	foreach $file (@files) {
-			# Propagate?
-		if ($self->{options}{'doGenerateToc'}) {
-			# Yes, propagate;
-				# Generate and insert ToC
-			$self->_generateFromFile($file);
-		}
-		else {
-			# No, just insert ToC
-				# Insert by parsing file
-			$self->parse_file($file);
-		}
+	# Get arguments
+    my ($self, $aFile) = @_;
+	# Local variables;
+    my ($file, @files);
+	# Dereference array reference or make array of file specification
+    @files = (ref($aFile) =~ m/ARRAY/) ? @$aFile : ($aFile);
+	# Loop through files
+    foreach $file (@files) {
+	    # Propagate?
+	if ($self->{options}{'doGenerateToc'}) {
+	    # Yes, propagate;
+		# Generate and insert ToC
+	    $self->_generateFromFile($file);
 	}
+	else {
+	    # No, just insert ToC
+		# Insert by parsing file
+	    $self->parse_file($file);
+	}
+    }
 }  # _insertIntoFile()
 
 
@@ -247,41 +251,41 @@ sub _insertIntoFile {
 # function: Parse ToC insertion point specifier.
 
 sub _parseTocInsertionPoints {
-		# Get arguments
-	my ($self) = @_;
-		# Local variables
-	my ($tipPreposition, $tipToken, $toc, $tokenTipParser);
-		# Create parser for TIP tokens
-	$tokenTipParser = HTML::_TokenTipParser->new(
-		$self->{_tokensTip}
+	# Get arguments
+    my ($self) = @_;
+	# Local variables
+    my ($tipPreposition, $tipToken, $toc, $tokenTipParser);
+	# Create parser for TIP tokens
+    $tokenTipParser = HTML::_TokenTipParser->new(
+	$self->{_tokensTip}
+    );
+	# Loop through ToCs
+    foreach $toc (@{$self->{_tocs}}) {
+	    # Split TIP in preposition and token
+	($tipPreposition, $tipToken) = split(
+	    '\s+', $toc->{options}{'insertionPoint'}, 2
 	);
-		# Loop through ToCs
-	foreach $toc (@{$self->{_tocs}}) {
-			# Split TIP in preposition and token
-		($tipPreposition, $tipToken) = split(
-			'\s+', $toc->{options}{'insertionPoint'}, 2
-		);
-			# Known preposition?
-		if (
-			($tipPreposition ne TIP_PREPOSITION_REPLACE) &&
-			($tipPreposition ne TIP_PREPOSITION_BEFORE) &&
-			($tipPreposition ne TIP_PREPOSITION_AFTER)
-		) {
-			# No, unknown preposition;
-				# Use default preposition
-			$tipPreposition = TIP_PREPOSITION_AFTER;
-				# Use entire 'insertionPoint' as token
-			$tipToken = $toc->{options}{'insertionPoint'};
-		}
-			# Indicate current ToC to parser
-		$tokenTipParser->setToc($toc);
-			# Indicate current preposition to parser
-		$tokenTipParser->setPreposition($tipPreposition);
-			# Parse ToC Insertion Point
-		$tokenTipParser->parse($tipToken);
-			# Flush remaining buffered text
-		$tokenTipParser->eof();
+	    # Known preposition?
+	if (
+	    ($tipPreposition ne TIP_PREPOSITION_REPLACE) &&
+	    ($tipPreposition ne TIP_PREPOSITION_BEFORE) &&
+	    ($tipPreposition ne TIP_PREPOSITION_AFTER)
+	) {
+	    # No, unknown preposition;
+		# Use default preposition
+	    $tipPreposition = TIP_PREPOSITION_AFTER;
+		# Use entire 'insertionPoint' as token
+	    $tipToken = $toc->{options}{'insertionPoint'};
 	}
+	    # Indicate current ToC to parser
+	$tokenTipParser->setToc($toc);
+	    # Indicate current preposition to parser
+	$tokenTipParser->setPreposition($tipPreposition);
+	    # Parse ToC Insertion Point
+	$tokenTipParser->parse($tipToken);
+	    # Flush remaining buffered text
+	$tokenTipParser->eof();
+    }
 }  # _parseTocInsertionPoints()
 
 
@@ -296,53 +300,53 @@ sub _parseTocInsertionPoints {
 #           if not.
 
 sub _processTokenAsInsertionPoint {
-		# Get arguments
-	my ($self, $aTokenType, $aTokenId, $aTokenAttributes, $aOrigText) = @_;
-		# Local variables
-	my ($i, $result, $tipToken, $tipTokenId, $tipTokens);
-		# Bias to token not functioning as a ToC insertion point (Tip) token
-	$result = 0;
-		# Alias ToC insertion point (Tip) array of right type
-	$tipTokens = $self->{_tokensTip}[$aTokenType];
-		# Loop through tipTokens
-	$i = 0;
-	while ($i < scalar @{$tipTokens}) {
-			# Aliases
-		$tipToken			         = $tipTokens->[$i];
-		$tipTokenId			         = $tipToken->[TIP_TOKEN_ID];
-			# Id & attributes match?
-		if (
-			($aTokenId =~ m/$tipTokenId/) && (
-				HTML::TocGenerator::_doesHashContainHash(
-					$aTokenAttributes, $tipToken->[TIP_INCLUDE_ATTRIBUTES], 0
-				) &&
-				HTML::TocGenerator::_doesHashContainHash(
-					$aTokenAttributes, $tipToken->[TIP_EXCLUDE_ATTRIBUTES], 1
-				)
-			)
-		) {
-			# Yes, id and attributes match;
-				# Process ToC insertion point
-			$self->_processTocInsertionPoint($tipToken);
-				# Indicate token functions as ToC insertion point
-			$result = 1;
-				# Remove Tip token, automatically advancing to next token
-			splice(@$tipTokens, $i, 1);
-		}
-		else {
-			# No, tag doesn't match ToC insertion point
-				# Advance to next start token
-			$i++;
-		}
+	# Get arguments
+    my ($self, $aTokenType, $aTokenId, $aTokenAttributes, $aOrigText) = @_;
+	# Local variables
+    my ($i, $result, $tipToken, $tipTokenId, $tipTokens);
+	# Bias to token not functioning as a ToC insertion point (Tip) token
+    $result = 0;
+	# Alias ToC insertion point (Tip) array of right type
+    $tipTokens = $self->{_tokensTip}[$aTokenType];
+	# Loop through tipTokens
+    $i = 0;
+    while ($i < scalar @{$tipTokens}) {
+	    # Aliases
+	$tipToken		     = $tipTokens->[$i];
+	$tipTokenId		     = $tipToken->[TIP_TOKEN_ID];
+	    # Id & attributes match?
+	if (
+	    ($aTokenId =~ m/$tipTokenId/) && (
+		HTML::TocGenerator::_doesHashContainHash(
+		    $aTokenAttributes, $tipToken->[TIP_INCLUDE_ATTRIBUTES], 0
+		) &&
+		HTML::TocGenerator::_doesHashContainHash(
+		    $aTokenAttributes, $tipToken->[TIP_EXCLUDE_ATTRIBUTES], 1
+		)
+	    )
+	) {
+	    # Yes, id and attributes match;
+		# Process ToC insertion point
+	    $self->_processTocInsertionPoint($tipToken);
+		# Indicate token functions as ToC insertion point
+	    $result = 1;
+		# Remove Tip token, automatically advancing to next token
+	    splice(@$tipTokens, $i, 1);
 	}
-		# Token functions as ToC insertion point?
-	if ($result) {
-		# Yes, token functions as ToC insertion point;
-			# Process insertion point(s)
-		$self->_processTocInsertionPoints($aOrigText);
+	else {
+	    # No, tag doesn't match ToC insertion point
+		# Advance to next start token
+	    $i++;
 	}
-		# Return value
-	return $result;
+    }
+	# Token functions as ToC insertion point?
+    if ($result) {
+	# Yes, token functions as ToC insertion point;
+	    # Process insertion point(s)
+	$self->_processTocInsertionPoints($aOrigText);
+    }
+	# Return value
+    return $result;
 }  # _processTokenAsInsertionPoint()
 
 
@@ -354,10 +358,10 @@ sub _processTokenAsInsertionPoint {
 #           build is inserted.
 
 sub toc {
-		# Get arguments
-	my ($self, $aScenario, $aToc) = @_;
-		# Add toc to scenario
-	push(@$aScenario, $aToc);
+	# Get arguments
+    my ($self, $aScenario, $aToc) = @_;
+	# Add toc to scenario
+    push(@$aScenario, $aToc);
 }  # toc()
 
 
@@ -367,49 +371,49 @@ sub toc {
 #                insertion point.
 
 sub _processTocInsertionPoint {
-		# Get arguments
-	my ($self, $aTipToken) = @_;
-		# Local variables
-	my ($tipToc, $tipPreposition); 
-	
-		# Aliases
-	$tipToc         = $aTipToken->[TIP_TOC];
-	$tipPreposition = $aTipToken->[TIP_PREPOSITION];
+	# Get arguments
+    my ($self, $aTipToken) = @_;
+	# Local variables
+    my ($tipToc, $tipPreposition); 
+    
+	# Aliases
+    $tipToc         = $aTipToken->[TIP_TOC];
+    $tipPreposition = $aTipToken->[TIP_PREPOSITION];
 
-	SWITCH: {
-			# Replace token with ToC?
-		if ($tipPreposition eq TIP_PREPOSITION_REPLACE) {
-			# Yes, replace token;
-				# Indicate ToC insertion point has been passed
-			$self->{_isTocInsertionPointPassed} = 1;
-				# Add ToC reference to scenario reference by calling 'toc' method
-			$self->toc($self->{_scenarioAfterToken}, $tipToc);
-			#push(@{$self->{_scenarioAfterToken}}, $tipTokenToc);
-				# Indicate token itself must not be output
-			$self->{_doOutputInsertionPointToken} = 0;
-			last SWITCH;
-		}
-			# Output ToC before token?
-		if ($tipPreposition eq TIP_PREPOSITION_BEFORE) {
-			# Yes, output ToC before token;
-				# Indicate ToC insertion point has been passed
-			$self->{_isTocInsertionPointPassed} = 1;
-				# Add ToC reference to scenario reference by calling 'toc' method
-			$self->toc($self->{_scenarioBeforeToken}, $tipToc);
-			#push(@{$self->{_scenarioBeforeToken}}, $tipTokenToc);
-			last SWITCH;
-		}
-			# Output ToC after token?
-		if ($tipPreposition eq TIP_PREPOSITION_AFTER) {
-			# Yes, output ToC after token;
-				# Indicate ToC insertion point has been passed
-			$self->{_isTocInsertionPointPassed} = 1;
-				# Add ToC reference to scenario reference by calling 'toc' method
-			$self->toc($self->{_scenarioAfterToken}, $tipToc);
-			#push(@{$self->{_scenarioAfterToken}}, $tipTokenToc);
-			last SWITCH;
-		}
+    SWITCH: {
+	    # Replace token with ToC?
+	if ($tipPreposition eq TIP_PREPOSITION_REPLACE) {
+	    # Yes, replace token;
+		# Indicate ToC insertion point has been passed
+	    $self->{_isTocInsertionPointPassed} = 1;
+		# Add ToC reference to scenario reference by calling 'toc' method
+	    $self->toc($self->{_scenarioAfterToken}, $tipToc);
+	    #push(@{$self->{_scenarioAfterToken}}, $tipTokenToc);
+		# Indicate token itself must not be output
+	    $self->{_doOutputInsertionPointToken} = 0;
+	    last SWITCH;
 	}
+	    # Output ToC before token?
+	if ($tipPreposition eq TIP_PREPOSITION_BEFORE) {
+	    # Yes, output ToC before token;
+		# Indicate ToC insertion point has been passed
+	    $self->{_isTocInsertionPointPassed} = 1;
+		# Add ToC reference to scenario reference by calling 'toc' method
+	    $self->toc($self->{_scenarioBeforeToken}, $tipToc);
+	    #push(@{$self->{_scenarioBeforeToken}}, $tipTokenToc);
+	    last SWITCH;
+	}
+	    # Output ToC after token?
+	if ($tipPreposition eq TIP_PREPOSITION_AFTER) {
+	    # Yes, output ToC after token;
+		# Indicate ToC insertion point has been passed
+	    $self->{_isTocInsertionPointPassed} = 1;
+		# Add ToC reference to scenario reference by calling 'toc' method
+	    $self->toc($self->{_scenarioAfterToken}, $tipToc);
+	    #push(@{$self->{_scenarioAfterToken}}, $tipTokenToc);
+	    last SWITCH;
+	}
+    }
 }  # _processTocInsertionPoint()
 
 
@@ -419,40 +423,40 @@ sub _processTocInsertionPoint {
 #                or multiple ToCs.
 
 sub _processTocInsertionPoints {
-		# Get arguments
-	my ($self, $aTokenText) = @_;
-		# Local variables
-	my ($outputPrefix, $outputSuffix);
-		# Extend scenario
-	push(@{$self->{_scenario}}, @{$self->{_scenarioBeforeToken}});
+	# Get arguments
+    my ($self, $aTokenText) = @_;
+	# Local variables
+    my ($outputPrefix, $outputSuffix);
+	# Extend scenario
+    push(@{$self->{_scenario}}, @{$self->{_scenarioBeforeToken}});
 
-	if ($outputPrefix = $self->{_outputPrefix}) {
-		push(@{$self->{_scenario}}, \$outputPrefix);
-		$self->{_outputPrefix} = "";
-	}
+    if ($outputPrefix = $self->{_outputPrefix}) {
+	push(@{$self->{_scenario}}, \$outputPrefix);
+	$self->{_outputPrefix} = "";
+    }
 
-		# Must insertion point token be output?
-	if ($self->{_doOutputInsertionPointToken}) {
-		# Yes, output insertion point token;
-		push(@{$self->{_scenario}}, \$aTokenText);
-	}
+	# Must insertion point token be output?
+    if ($self->{_doOutputInsertionPointToken}) {
+	# Yes, output insertion point token;
+	push(@{$self->{_scenario}}, \$aTokenText);
+    }
 
-	if ($outputSuffix = $self->{_outputSuffix}) {
-		push(@{$self->{_scenario}}, \$outputSuffix);
-		$self->{_outputSuffix} = "";
-	}
+    if ($outputSuffix = $self->{_outputSuffix}) {
+	push(@{$self->{_scenario}}, \$outputSuffix);
+	$self->{_outputSuffix} = "";
+    }
 
-	push(@{$self->{_scenario}}, @{$self->{_scenarioAfterToken}});
-		# Add new act to scenario for output to come
-	my $output = "";
-	push(@{$self->{_scenario}}, \$output);
-		# Write output, processing possible '_outputSuffix'
-	#$self->_writeOrBufferOutput("");
-		# Reset helper scenario's
-	$self->{_scenarioBeforeToken} = [];
-	$self->{_scenarioAfterToken}  = [];
-		# Reset bias value to output insertion point token
-	$self->{_doOutputInsertionPointToken} = 1;
+    push(@{$self->{_scenario}}, @{$self->{_scenarioAfterToken}});
+	# Add new act to scenario for output to come
+    my $output = "";
+    push(@{$self->{_scenario}}, \$output);
+	# Write output, processing possible '_outputSuffix'
+    #$self->_writeOrBufferOutput("");
+	# Reset helper scenario's
+    $self->{_scenarioBeforeToken} = [];
+    $self->{_scenarioAfterToken}  = [];
+	# Reset bias value to output insertion point token
+    $self->{_doOutputInsertionPointToken} = 1;
 
 }  # _processTocInsertionPoints()
 
@@ -461,35 +465,35 @@ sub _processTocInsertionPoints {
 # function: Reset batch variables.
 
 sub _resetBatchVariables {
-	my ($self) = @_;
-		# Call ancestor
-	$self->SUPER::_resetBatchVariables();
-		# Array containing references to scalars.  This array depicts the order
-		# in which output must be performed after the first ToC Insertion Point
-		# has been passed.
-	$self->{_scenario}            = [];
-		# Helper scenario
-	$self->{_scenarioBeforeToken} = [];
-		# Helper scenario
-	$self->{_scenarioAfterToken}  = [];
-		# Arrays containing start, end, comment, text & declaration tokens which 
-		# must trigger the ToC insertion.  Each array element may contain a 
-		# reference to an array containing the following elements:
-	$self->{_tokensTip} = [
-		[],	# TT_TOKENTYPE_START
-		[],	# TT_TOKENTYPE_END
-		[],	# TT_TOKENTYPE_COMMENT
-		[],	# TT_TOKENTYPE_TEXT
-		[]		# TT_TOKENTYPE_DECLARATION
-	];
-		# 1 if ToC insertion point has been passed, 0 if not
-	$self->{_isTocInsertionPointPassed} = 0;
-		# Tokens after ToC
-	$self->{outputBuffer} = "";
-		# Trailing text after parsed token
-	$self->{_outputSuffix} = "";
-		# Preceding text before parsed token
-	$self->{_outputPrefix} = "";
+    my ($self) = @_;
+	# Call ancestor
+    $self->SUPER::_resetBatchVariables();
+	# Array containing references to scalars.  This array depicts the order
+	# in which output must be performed after the first ToC Insertion Point
+	# has been passed.
+    $self->{_scenario}            = [];
+	# Helper scenario
+    $self->{_scenarioBeforeToken} = [];
+	# Helper scenario
+    $self->{_scenarioAfterToken}  = [];
+	# Arrays containing start, end, comment, text & declaration tokens which 
+	# must trigger the ToC insertion.  Each array element may contain a 
+	# reference to an array containing the following elements:
+    $self->{_tokensTip} = [
+	[], # TT_TOKENTYPE_START
+	[], # TT_TOKENTYPE_END
+	[], # TT_TOKENTYPE_COMMENT
+	[], # TT_TOKENTYPE_TEXT
+	[]	# TT_TOKENTYPE_DECLARATION
+    ];
+	# 1 if ToC insertion point has been passed, 0 if not
+    $self->{_isTocInsertionPointPassed} = 0;
+	# Tokens after ToC
+    $self->{outputBuffer} = "";
+	# Trailing text after parsed token
+    $self->{_outputSuffix} = "";
+	# Preceding text before parsed token
+    $self->{_outputPrefix} = "";
 }  # _resetBatchVariables()
 
 
@@ -497,35 +501,35 @@ sub _resetBatchVariables {
 # function: Write buffered output to output device(s).
 
 sub _writeBufferedOutput {
-		# Get arguments
-	my ($self) = @_;
-		# Local variables
-	my ($scene);
-		# Must ToC be parsed?
-	if ($self->{options}{'parseToc'}) {
-		# Yes, ToC must be parsed;
-			# Parse ToC
-		#$self->parse($self->{toc});
-			# Output tokens after ToC
-		#$self->_writeOrBufferOutput($self->{outputBuffer});
+	# Get arguments
+    my ($self) = @_;
+	# Local variables
+    my ($scene);
+	# Must ToC be parsed?
+    if ($self->{options}{'parseToc'}) {
+	# Yes, ToC must be parsed;
+	    # Parse ToC
+	#$self->parse($self->{toc});
+	    # Output tokens after ToC
+	#$self->_writeOrBufferOutput($self->{outputBuffer});
+    }
+    else {
+	# No, ToC needn't be parsed;
+	    # Output scenario
+	foreach $scene (@{$self->{_scenario}}) {
+		# Is scene a reference to a scalar?
+	    if (ref($scene) eq "SCALAR") {
+		# Yes, scene is a reference to a scalar;
+		    # Output scene
+		$self->_writeOutput($$scene);
+	    }
+	    else {
+		# No, scene must be reference to HTML::Toc;
+		    # Output toc
+		$self->_writeOutput($scene->format());
+	    }
 	}
-	else {
-		# No, ToC needn't be parsed;
-			# Output scenario
-		foreach $scene (@{$self->{_scenario}}) {
-				# Is scene a reference to a scalar?
-			if (ref($scene) eq "SCALAR") {
-				# Yes, scene is a reference to a scalar;
-					# Output scene
-				$self->_writeOutput($$scene);
-			}
-			else {
-				# No, scene must be reference to HTML::Toc;
-					# Output toc
-				$self->_writeOutput($scene->format());
-			}
-		}
-	}
+    }
 }  # _writeBufferedOutput()
 
 
@@ -538,27 +542,37 @@ sub _writeBufferedOutput {
 #           following text will be output.
 
 sub _writeOrBufferOutput {
-		# Get arguments
-	my ($self, $aOutput) = @_;
+	# Get arguments
+    my ($self, $aOutput) = @_;
 
-		# Add possible output prefix and suffix
-	$aOutput = $self->{_outputPrefix} . $aOutput . $self->{_outputSuffix};
-		# Clear output prefix and suffix
-	$self->{_outputPrefix} = "";
-	$self->{_outputSuffix} = "";
+	# Add possible output prefix and suffix
+	# If both anchor name begin and anchor name end are written, switch them
+	# NOTE: This is the case when a token triggers both `anchorNameBegin' and
+	#       `anchorNameEnd', e.g. with token: <img/>
+   if ($self->{_writingAnchorName}) {
+       $aOutput = $self->{_outputSuffix} . $aOutput . $self->{_outputPrefix};
+       $self->{_writingAnchorName} = 0;
+   } else {
+       $aOutput = $self->{_outputPrefix} . $aOutput . $self->{_outputSuffix};
+   } # if
+	# Reset anchor-name-begin flag
+    $self->{_writingAnchorNameBegin} = 0;
+	# Clear output prefix and suffix
+    $self->{_outputPrefix} = "";
+    $self->{_outputSuffix} = "";
 
-		# Has ToC insertion point been passed?
-	if ($self->{_isTocInsertionPointPassed}) {
-		# Yes, ToC insertion point has been passed;
-			# Buffer output; add output to last '_scenario' item
-		my $index = scalar(@{$self->{_scenario}}) - 1;
-		${$self->{_scenario}[$index]} .= $aOutput;
-	}
-	else {
-		# No, ToC insertion point hasn't been passed;
-			# Write output
-		$self->_writeOutput($aOutput);
-	}
+	# Has ToC insertion point been passed?
+    if ($self->{_isTocInsertionPointPassed}) {
+	# Yes, ToC insertion point has been passed;
+	    # Buffer output; add output to last '_scenario' item
+	my $index = scalar(@{$self->{_scenario}}) - 1;
+	${$self->{_scenario}[$index]} .= $aOutput;
+    }
+    else {
+	# No, ToC insertion point hasn't been passed;
+	    # Write output
+	$self->_writeOutput($aOutput);
+    }
 }  # _writeOrBufferOutput()
 
 
@@ -567,12 +581,12 @@ sub _writeOrBufferOutput {
 # args:     - aOutput: scalar to write
 
 sub _writeOutput {
-		# Get arguments
-	my ($self, $aOutput) = @_;
-		# Write output to scalar;
-	${$self->{_output}} .= $aOutput if (defined($self->{_output}));
-		# Write output to output file
-	print $aOutput if ($self->{_doOutputToFile})
+	# Get arguments
+    my ($self, $aOutput) = @_;
+	# Write output to scalar;
+    ${$self->{_output}} .= $aOutput if (defined($self->{_output}));
+	# Write output to output file
+    print $aOutput if ($self->{_doOutputToFile})
 }  # _writeOutput()
 
 
@@ -581,11 +595,11 @@ sub _writeOutput {
 # args:     - $aAnchorId
 
 sub anchorId {
-		# Get arguments
-	my ($self, $aAnchorId) = @_;
-		# Indicate id must be added to start tag
-	$self->{_doAddAnchorIdToStartTag} = 1;
-	$self->{_anchorId} = $aAnchorId;
+	# Get arguments
+    my ($self, $aAnchorId) = @_;
+	# Indicate id must be added to start tag
+    $self->{_doAddAnchorIdToStartTag} = 1;
+    $self->{_anchorId} = $aAnchorId;
 }  # anchorId()
 
 
@@ -595,25 +609,15 @@ sub anchorId {
 #           - $aToc: Reference to ToC to which anchorname belongs.
 
 sub anchorNameBegin {
-		# Get arguments
-	my ($self, $aAnchorNameBegin, $aToc) = @_;
-		# Is another anchorName active?
-	if (defined($self->{_activeAnchorName})) {
-		# Yes, another anchorName is active;
-			# Show warning
-		print "Warn\n";
-		$self->_showWarning(
-			HTML::TocGenerator::WARNING_NESTED_ANCHOR_PS_WITHIN_PS,
-			[$aAnchorNameBegin, $self->{_activeAnchorName}]
-		);
-	}
-		# Store anchor name as output prefix
-	$self->{_outputPrefix} = $aAnchorNameBegin;
-		# Indicate active anchor name
-	$self->{_activeAnchorName} = $aAnchorNameBegin;
-		# Indicate anchor name end must be output
-	$self->{_doOutputAnchorNameEnd} = 1;
-}	# anchorNameBegin()
+	# Get arguments
+    my ($self, $aAnchorNameBegin, $aToc) = @_;
+	# Store anchor name as output suffix
+    $self->{_outputSuffix} = $aAnchorNameBegin;
+	# Indicate anchor name is being written
+    $self->{_writingAnchorNameBegin} = 1;
+	# Indicate anchor name end must be output
+    $self->{_doOutputAnchorNameEnd} = 1;
+}   # anchorNameBegin()
 
 
 #--- HTML::TocInsertor::anchorNameEnd() ---------------------------------------
@@ -622,13 +626,17 @@ sub anchorNameBegin {
 #           - $aToc: Reference to ToC to which anchorname belongs.
 
 sub anchorNameEnd {
-		# Get arguments
-	my ($self, $aAnchorNameEnd) = @_;
-		# Store anchor name as output prefix
-	$self->{_outputSuffix} .= $aAnchorNameEnd;
-		# Indicate deactive anchor name
-	$self->{_activeAnchorName} = undef;
-}	# anchorNameEnd()
+	# Get arguments
+    my ($self, $aAnchorNameEnd) = @_;
+	# Store anchor name as output prefix
+    $self->{_outputPrefix} .= $aAnchorNameEnd;
+	# Is anchor-name-begin being output this parsing round as well?
+    if ($self->{_writingAnchorNameBegin}) {
+	# Yes, anchor-name-begin is being output as well;
+	    # Indicate both anchor name begin and anchor name end are being written
+	$self->{_writingAnchorName} = 1;
+    } # if
+}   # anchorNameEnd()
 
 
 #--- HTML::TocInsertor::comment() ---------------------------------------------
@@ -636,26 +644,26 @@ sub anchorNameEnd {
 # args:     - $aComment: comment text with '<!--' and '-->' tags stripped off.
 
 sub comment {
-		# Get arguments
-	my ($self, $aComment) = @_;
-		# Local variables
-	my ($tocInsertionPointToken, $doOutput, $origText);
-		# Allow ancestor to process the comment tag
-	$self->SUPER::comment($aComment);
-		# Assemble original comment
-	$origText = "<!--$aComment-->";
-		# Must ToCs be inserted?
-	if ($self->{hti__Mode} & MODE_DO_INSERT) {
-		# Yes, ToCs must be inserted;
-			# Processing comment as ToC insertion point is successful?
-		if (! $self->_processTokenAsInsertionPoint(
-			HTML::TocGenerator::TT_TOKENTYPE_COMMENT, $aComment, undef, $origText
-		)) {
-			# No, comment isn't a ToC insertion point;
-				# Output comment normally
-			$self->_writeOrBufferOutput($origText);
-		}
+	# Get arguments
+    my ($self, $aComment) = @_;
+	# Local variables
+    my ($tocInsertionPointToken, $doOutput, $origText);
+	# Allow ancestor to process the comment tag
+    $self->SUPER::comment($aComment);
+	# Assemble original comment
+    $origText = "<!--$aComment-->";
+	# Must ToCs be inserted?
+    if ($self->{hti__Mode} & MODE_DO_INSERT) {
+	# Yes, ToCs must be inserted;
+	    # Processing comment as ToC insertion point is successful?
+	if (! $self->_processTokenAsInsertionPoint(
+	    HTML::TocGenerator::TT_TOKENTYPE_COMMENT, $aComment, undef, $origText
+	)) {
+	    # No, comment isn't a ToC insertion point;
+		# Output comment normally
+	    $self->_writeOrBufferOutput($origText);
 	}
+    }
 }  # comment()
 
 
@@ -664,23 +672,23 @@ sub comment {
 #           by HTML::Parser.
 
 sub declaration {
-		# Get arguments
-	my ($self, $aDeclaration) = @_;
-		# Allow ancestor to process the declaration tag
-	$self->SUPER::declaration($aDeclaration);
-		# Must ToCs be inserted?
-	if ($self->{hti__Mode} & MODE_DO_INSERT) {
-		# Yes, ToCs must be inserted;
-			# Processing declaration as ToC insertion point is successful?
-		if (! $self->_processTokenAsInsertionPoint(
-			HTML::TocGenerator::TT_TOKENTYPE_DECLARATION, $aDeclaration, undef, 
-			"<!$aDeclaration>"
-		)) {
-			# No, declaration isn't a ToC insertion point;
-				# Output declaration normally
-			$self->_writeOrBufferOutput("<!$aDeclaration>");
-		}
+	# Get arguments
+    my ($self, $aDeclaration) = @_;
+	# Allow ancestor to process the declaration tag
+    $self->SUPER::declaration($aDeclaration);
+	# Must ToCs be inserted?
+    if ($self->{hti__Mode} & MODE_DO_INSERT) {
+	# Yes, ToCs must be inserted;
+	    # Processing declaration as ToC insertion point is successful?
+	if (! $self->_processTokenAsInsertionPoint(
+	    HTML::TocGenerator::TT_TOKENTYPE_DECLARATION, $aDeclaration, undef, 
+	    "<!$aDeclaration>"
+	)) {
+	    # No, declaration isn't a ToC insertion point;
+		# Output declaration normally
+	    $self->_writeOrBufferOutput("<!$aDeclaration>");
 	}
+    }
 }  # declaration()
 
 
@@ -690,22 +698,22 @@ sub declaration {
 # args:     - $aTag: tag name (in lower case).
 
 sub end {
-		# Get arguments
-	my ($self, $aTag, $aOrigText) = @_;
-		# Allow ancestor to process the end tag
-	$self->SUPER::end($aTag, $aOrigText);
-		# Must ToCs be inserted?
-	if ($self->{hti__Mode} & MODE_DO_INSERT) {
-		# Yes, ToCs must be inserted;
-			# Processing end tag as ToC insertion point is successful?
-		if (! $self->_processTokenAsInsertionPoint(
-			HTML::TocGenerator::TT_TOKENTYPE_END, $aTag, undef, $aOrigText
-		)) {
-			# No, end tag isn't a ToC insertion point;
-				# Output end tag normally
-			$self->_writeOrBufferOutput($aOrigText);
-		}
+	# Get arguments
+    my ($self, $aTag, $aOrigText) = @_;
+	# Allow ancestor to process the end tag
+    $self->SUPER::end($aTag, $aOrigText);
+	# Must ToCs be inserted?
+    if ($self->{hti__Mode} & MODE_DO_INSERT) {
+	# Yes, ToCs must be inserted;
+	    # Processing end tag as ToC insertion point is successful?
+	if (! $self->_processTokenAsInsertionPoint(
+	    HTML::TocGenerator::TT_TOKENTYPE_END, $aTag, undef, $aOrigText
+	)) {
+	    # No, end tag isn't a ToC insertion point;
+		# Output end tag normally
+	    $self->_writeOrBufferOutput($aOrigText);
 	}
+    }
 }  # end()
 
 
@@ -716,14 +724,14 @@ sub end {
 #           - $aOptions: hash reference with optional insertor options
 
 sub insert {
-		# Get arguments
-	my ($self, $aToc, $aString, $aOptions) = @_;
-		# Initialize TocInsertor batch
-	$self->_initializeInsertorBatch($aToc, $aOptions);
-		# Do insert Toc
-	$self->_insert($aString);
-		# Deinitialize TocInsertor batch
-	$self->_deinitializeInsertorBatch();
+	# Get arguments
+    my ($self, $aToc, $aString, $aOptions) = @_;
+	# Initialize TocInsertor batch
+    $self->_initializeInsertorBatch($aToc, $aOptions);
+	# Do insert Toc
+    $self->_insert($aString);
+	# Deinitialize TocInsertor batch
+    $self->_deinitializeInsertorBatch();
 }  # insert()
 
 
@@ -735,14 +743,14 @@ sub insert {
 #           - $aOptions: optional insertor options
 
 sub insertIntoFile {
-		# Get arguments
-	my ($self, $aToc, $aFile, $aOptions) = @_;
-		# Initialize TocInsertor batch
-	$self->_initializeInsertorBatch($aToc, $aOptions);
-		# Do insert ToCs into file
-	$self->_insertIntoFile($aFile);
-		# Deinitialize TocInsertor batch
-	$self->_deinitializeInsertorBatch();
+	# Get arguments
+    my ($self, $aToc, $aFile, $aOptions) = @_;
+	# Initialize TocInsertor batch
+    $self->_initializeInsertorBatch($aToc, $aOptions);
+	# Do insert ToCs into file
+    $self->_insertIntoFile($aFile);
+	# Deinitialize TocInsertor batch
+    $self->_deinitializeInsertorBatch();
 }  # insertIntoFile()
 
 
@@ -751,11 +759,11 @@ sub insertIntoFile {
 # args:     - $aNumber
 
 sub number {
-		# Get arguments
-	my ($self, $aNumber) = @_;
-		# Store heading number as output suffix
-	$self->{_outputSuffix} .= $aNumber;
-}	# number()
+	# Get arguments
+    my ($self, $aNumber, $aToc) = @_;
+	# Store heading number as output suffix
+    $self->{_outputSuffix} .= $aNumber;
+}   # number()
 
 
 #--- HTML::TocInsertor::propagateFile() ---------------------------------------
@@ -766,21 +774,21 @@ sub number {
 #           - $aOptions: optional insertor options
 
 sub propagateFile {
-		# Get arguments
-	my ($self, $aToc, $aFile, $aOptions) = @_;
-		# Local variables;
-	my ($file, @files);
-		# Initialize TocInsertor batch
-	$self->_initializeInsertorBatch($aToc, $aOptions);
-		# Dereference array reference or make array of file specification
-	@files = (ref($aFile) =~ m/ARRAY/) ? @$aFile : ($aFile);
-		# Loop through files
-	foreach $file (@files) {
-			# Generate and insert ToC
-		$self->_generateFromFile($file);
-	}
-		# Deinitialize TocInsertor batch
-	$self->_deinitializeInsertorBatch();
+	# Get arguments
+    my ($self, $aToc, $aFile, $aOptions) = @_;
+	# Local variables;
+    my ($file, @files);
+	# Initialize TocInsertor batch
+    $self->_initializeInsertorBatch($aToc, $aOptions);
+	# Dereference array reference or make array of file specification
+    @files = (ref($aFile) =~ m/ARRAY/) ? @$aFile : ($aFile);
+	# Loop through files
+    foreach $file (@files) {
+	    # Generate and insert ToC
+	$self->_generateFromFile($file);
+    }
+	# Deinitialize TocInsertor batch
+    $self->_deinitializeInsertorBatch();
 }  # propagateFile()
 
 
@@ -794,47 +802,47 @@ sub propagateFile {
 #           - $aOrigText: the original HTML text
 
 sub start {
-		# Get arguments
-	my ($self, $aTag, $aAttr, $aAttrSeq, $aOrigText) = @_;
-		# Local variables
-	my ($doOutput, $i, $tocToken, $tag, $anchorId);
-		# Let ancestor process the start tag
-	$self->SUPER::start($aTag, $aAttr, $aAttrSeq, $aOrigText);
-		# Must ToC be inserted?
-	if ($self->{hti__Mode} & MODE_DO_INSERT) {
-		# Yes, ToC must be inserted;
-			# Processing start tag as ToC insertion point is successful?
-		if (! $self->_processTokenAsInsertionPoint(
-			HTML::TocGenerator::TT_TOKENTYPE_START, $aTag, $aAttr, $aOrigText
-		)) {
-			# No, start tag isn't a ToC insertion point;
-				# Add anchor id?
-			if ($self->{_doAddAnchorIdToStartTag}) {
-				# Yes, anchor id must be added;
-					# Reset indicator;
-				$self->{_doAddAnchorIdToStartTag} = 0;
-					# Alias anchor id
-				$anchorId = $self->{_anchorId};
-					# Attribute 'id' already exists?
-				if (defined($aAttr->{id})) {
-					# Yes, attribute 'id' already exists;
-						# Show warning
-					print STDERR "WARNING: Overwriting existing id attribute '" .
-						$aAttr->{id} . "' of tag $aOrigText\n";
-					
-						# Add anchor id to start tag
-					$aOrigText =~ s/(id)=\S*([\s>])/$1=$anchorId$2/i;
-				}
-				else {
-					# No, attribute 'id' doesn't exist;
-						# Add anchor id to start tag
-					$aOrigText =~ s/>/ id=$anchorId>/;
-				}
-			}
-				# Output start tag normally
-			$self->_writeOrBufferOutput($aOrigText);
+	# Get arguments
+    my ($self, $aTag, $aAttr, $aAttrSeq, $aOrigText) = @_;
+	# Local variables
+    my ($doOutput, $i, $tocToken, $tag, $anchorId);
+	# Let ancestor process the start tag
+    $self->SUPER::start($aTag, $aAttr, $aAttrSeq, $aOrigText);
+	# Must ToC be inserted?
+    if ($self->{hti__Mode} & MODE_DO_INSERT) {
+	# Yes, ToC must be inserted;
+	    # Processing start tag as ToC insertion point is successful?
+	if (! $self->_processTokenAsInsertionPoint(
+	    HTML::TocGenerator::TT_TOKENTYPE_START, $aTag, $aAttr, $aOrigText
+	)) {
+	    # No, start tag isn't a ToC insertion point;
+		# Add anchor id?
+	    if ($self->{_doAddAnchorIdToStartTag}) {
+		# Yes, anchor id must be added;
+		    # Reset indicator;
+		$self->{_doAddAnchorIdToStartTag} = 0;
+		    # Alias anchor id
+		$anchorId = $self->{_anchorId};
+		    # Attribute 'id' already exists?
+		if (defined($aAttr->{id})) {
+		    # Yes, attribute 'id' already exists;
+			# Show warning
+		    print STDERR "WARNING: Overwriting existing id attribute '" .
+			$aAttr->{id} . "' of tag $aOrigText\n";
+		    
+			# Add anchor id to start tag
+		    $aOrigText =~ s/(id)=\S*([\s>])/$1=$anchorId$2/i;
 		}
+		else {
+		    # No, attribute 'id' doesn't exist;
+			# Add anchor id to start tag
+		    $aOrigText =~ s/>/ id=$anchorId>/;
+		}
+	    }
+		# Output start tag normally
+	    $self->_writeOrBufferOutput($aOrigText);
 	}
+    }
 }  # start()
 
 
@@ -843,22 +851,22 @@ sub start {
 # args:     - @_: array containing data.
 
 sub text {
-		# Get arguments
-	my ($self, $aText) = @_;
-		# Let ancestor process the text
-	$self->SUPER::text($aText);
-		# Must ToC be inserted?
-	if ($self->{hti__Mode} & MODE_DO_INSERT) {
-		# Yes, ToC must be inserted;
-			# Processing text as ToC insertion point is successful?
-		if (! $self->_processTokenAsInsertionPoint(
-			HTML::TocGenerator::TT_TOKENTYPE_TEXT, $aText, undef, $aText
-		)) {
-			# No, text isn't a ToC insertion point;
-				# Output text normally
-			$self->_writeOrBufferOutput($aText);
-		}
+	# Get arguments
+    my ($self, $aText) = @_;
+	# Let ancestor process the text
+    $self->SUPER::text($aText);
+	# Must ToC be inserted?
+    if ($self->{hti__Mode} & MODE_DO_INSERT) {
+	# Yes, ToC must be inserted;
+	    # Processing text as ToC insertion point is successful?
+	if (! $self->_processTokenAsInsertionPoint(
+	    HTML::TocGenerator::TT_TOKENTYPE_TEXT, $aText, undef, $aText
+	)) {
+	    # No, text isn't a ToC insertion point;
+		# Output text normally
+	    $self->_writeOrBufferOutput($aText);
 	}
+    }
 }  # text()
 
 
@@ -873,9 +881,9 @@ package HTML::_TokenTipParser;
 
 
 BEGIN {
-	use vars qw(@ISA);
+    use vars qw(@ISA);
 
-	@ISA = qw(HTML::_TokenTocParser);
+    @ISA = qw(HTML::_TokenTocParser);
 }
 
 
@@ -886,17 +894,17 @@ END {}
 # function: Constructor
 
 sub new {
-		# Get arguments
-	my ($aType, $aTokenArray) = @_;
-		# Create instance
-	my $self = $aType->SUPER::new;
-		# Reference token array
-	$self->{tokens} = $aTokenArray;
-		# Reference to last added token
-	$self->{_lastAddedToken}     = undef;
-	$self->{_lastAddedTokenType} = undef;
-		# Return instance
-	return $self;
+	# Get arguments
+    my ($aType, $aTokenArray) = @_;
+	# Create instance
+    my $self = $aType->SUPER::new;
+	# Reference token array
+    $self->{tokens} = $aTokenArray;
+	# Reference to last added token
+    $self->{_lastAddedToken}     = undef;
+    $self->{_lastAddedTokenType} = undef;
+	# Return instance
+    return $self;
 }  # new()
 
 
@@ -905,31 +913,31 @@ sub new {
 # args:     - $aAttributes: Attributes to parse.
 
 sub _processAttributes {
-		# Get arguments
-	my ($self, $aAttributes) = @_;
-		# Local variables
-	my (%includeAttributes, %excludeAttributes);
+	# Get arguments
+    my ($self, $aAttributes) = @_;
+	# Local variables
+    my (%includeAttributes, %excludeAttributes);
 
-		# Parse attributes
-	$self->_parseAttributes(
-		$aAttributes, \%includeAttributes, \%excludeAttributes
-	);
-		# Include attributes are specified?
-	if (keys(%includeAttributes) > 0) {
-		# Yes, include attributes are specified;
-			# Store include attributes
-		@${$self->{_lastAddedToken}}[
-			HTML::TocInsertor::TIP_INCLUDE_ATTRIBUTES
-		] = \%includeAttributes;
-	}
-		# Exclude attributes are specified?
-	if (keys(%excludeAttributes) > 0) {
-		# Yes, exclude attributes are specified;
-			# Store exclude attributes
-		@${$self->{_lastAddedToken}}[
-			HTML::TocInsertor::TIP_EXCLUDE_ATTRIBUTES
-		] = \%excludeAttributes;
-	}
+	# Parse attributes
+    $self->_parseAttributes(
+	$aAttributes, \%includeAttributes, \%excludeAttributes
+    );
+	# Include attributes are specified?
+    if (keys(%includeAttributes) > 0) {
+	# Yes, include attributes are specified;
+	    # Store include attributes
+	@${$self->{_lastAddedToken}}[
+	    HTML::TocInsertor::TIP_INCLUDE_ATTRIBUTES
+	] = \%includeAttributes;
+    }
+	# Exclude attributes are specified?
+    if (keys(%excludeAttributes) > 0) {
+	# Yes, exclude attributes are specified;
+	    # Store exclude attributes
+	@${$self->{_lastAddedToken}}[
+	    HTML::TocInsertor::TIP_EXCLUDE_ATTRIBUTES
+	] = \%excludeAttributes;
+    }
 }  # _processAttributes()
 
 
@@ -939,22 +947,22 @@ sub _processAttributes {
 #           - $aTag: Tag of token.
 
 sub _processToken {
-		# Get arguments
-	my ($self, $aTokenType, $aTag) = @_;
-		# Local variables
-	my ($tokenArray, $index);
-		# Push element on array of update tokens
-	$index = push(@{$self->{tokens}[$aTokenType]}, []) - 1;
-		# Alias token array to add element to
-	$tokenArray = $self->{tokens}[$aTokenType];
-		# Indicate last updated token array element
-	$self->{_lastAddedTokenType} = $aTokenType;
-	$self->{_lastAddedToken}     = \$$tokenArray[$index];
-		# Add fields
-	$$tokenArray[$index][HTML::TocInsertor::TIP_TOC]         = $self->{_toc};
-	$$tokenArray[$index][HTML::TocInsertor::TIP_TOKEN_ID] 	= $aTag;
-	$$tokenArray[$index][HTML::TocInsertor::TIP_PREPOSITION] =
-		$self->{_preposition};
+	# Get arguments
+    my ($self, $aTokenType, $aTag) = @_;
+	# Local variables
+    my ($tokenArray, $index);
+	# Push element on array of update tokens
+    $index = push(@{$self->{tokens}[$aTokenType]}, []) - 1;
+	# Alias token array to add element to
+    $tokenArray = $self->{tokens}[$aTokenType];
+	# Indicate last updated token array element
+    $self->{_lastAddedTokenType} = $aTokenType;
+    $self->{_lastAddedToken}     = \$$tokenArray[$index];
+	# Add fields
+    $$tokenArray[$index][HTML::TocInsertor::TIP_TOC]         = $self->{_toc};
+    $$tokenArray[$index][HTML::TocInsertor::TIP_TOKEN_ID]   = $aTag;
+    $$tokenArray[$index][HTML::TocInsertor::TIP_PREPOSITION] =
+	$self->{_preposition};
 }  # _processToken()
 
 
@@ -963,10 +971,10 @@ sub _processToken {
 # args:     - $aComment: comment text with '<!--' and '-->' tags stripped off.
 
 sub comment {
-		# Get arguments
-	my ($self, $aComment) = @_;
-		# Process token
-	$self->_processToken(HTML::TocGenerator::TT_TOKENTYPE_COMMENT, $aComment);
+	# Get arguments
+    my ($self, $aComment) = @_;
+	# Process token
+    $self->_processToken(HTML::TocGenerator::TT_TOKENTYPE_COMMENT, $aComment);
 }  # comment()
 
 
@@ -976,25 +984,25 @@ sub comment {
 # args:     - $aDeclaration: Markup declaration.
 
 sub declaration {
-		# Get arguments
-	my ($self, $aDeclaration) = @_;
-		# Process token
-	$self->_processToken(
-		HTML::TocGenerator::TT_TOKENTYPE_DECLARATION, $aDeclaration
-	);
+	# Get arguments
+    my ($self, $aDeclaration) = @_;
+	# Process token
+    $self->_processToken(
+	HTML::TocGenerator::TT_TOKENTYPE_DECLARATION, $aDeclaration
+    );
 }  # declaration()
 
-	
+    
 #--- HTML::_TokenTipParser::end() ----------------------------------------
 # function: This function is called every time a closing tag is encountered
 #           by HTML::Parser.
 # args:     - $aTag: tag name (in lower case).
 
 sub end {
-		# Get arguments
-	my ($self, $aTag, $aOrigText) = @_;
-		# Process token
-	$self->_processToken(HTML::TocGenerator::TT_TOKENTYPE_END, $aTag);
+	# Get arguments
+    my ($self, $aTag, $aOrigText) = @_;
+	# Process token
+    $self->_processToken(HTML::TocGenerator::TT_TOKENTYPE_END, $aTag);
 }  # end()
 
 
@@ -1002,10 +1010,10 @@ sub end {
 # function: Set current preposition.
 
 sub setPreposition {
-		# Get arguments
-	my ($self, $aPreposition) = @_;
-		# Set current ToC
-	$self->{_preposition} = $aPreposition;
+	# Get arguments
+    my ($self, $aPreposition) = @_;
+	# Set current ToC
+    $self->{_preposition} = $aPreposition;
 }  # setPreposition()
 
 
@@ -1013,10 +1021,10 @@ sub setPreposition {
 # function: Set current ToC.
 
 sub setToc {
-		# Get arguments
-	my ($self, $aToc) = @_;
-		# Set current ToC
-	$self->{_toc} = $aToc;
+	# Get arguments
+    my ($self, $aToc) = @_;
+	# Set current ToC
+    $self->{_toc} = $aToc;
 }  # setToc()
 
 
@@ -1030,12 +1038,12 @@ sub setToc {
 #           - $aOrigText: the original HTML text
 
 sub start {
-		# Get arguments
-	my ($self, $aTag, $aAttr, $aAttrSeq, $aOrigText) = @_;
-		# Process token
-	$self->_processToken(HTML::TocGenerator::TT_TOKENTYPE_START, $aTag);
-		# Process attributes
-	$self->_processAttributes($aAttr);
+	# Get arguments
+    my ($self, $aTag, $aAttr, $aAttrSeq, $aOrigText) = @_;
+	# Process token
+    $self->_processToken(HTML::TocGenerator::TT_TOKENTYPE_START, $aTag);
+	# Process attributes
+    $self->_processAttributes($aAttr);
 }  # start()
 
 
@@ -1044,22 +1052,22 @@ sub start {
 # args:     - @_: array containing data.
 
 sub text {
-		# Get arguments
-	my ($self, $aText) = @_;
-		# Was token already created and is last added token of type 'text'?
-	if (
-		defined($self->{_lastAddedToken}) && 
-		$self->{_lastAddedTokenType} == HTML::TocGenerator::TT_TOKENTYPE_TEXT
-	) {
-		# Yes, token is already created;
-			# Add tag to existing token
-		@${$self->{_lastAddedToken}}[HTML::TocGenerator::TT_TAG_BEGIN] .= $aText;
-	}
-	else {
-		# No, token isn't created;
-			# Process token
-		$self->_processToken(HTML::TocGenerator::TT_TOKENTYPE_TEXT, $aText);
-	}
+	# Get arguments
+    my ($self, $aText) = @_;
+	# Was token already created and is last added token of type 'text'?
+    if (
+	defined($self->{_lastAddedToken}) && 
+	$self->{_lastAddedTokenType} == HTML::TocGenerator::TT_TOKENTYPE_TEXT
+    ) {
+	# Yes, token is already created;
+	    # Add tag to existing token
+	@${$self->{_lastAddedToken}}[HTML::TocGenerator::TT_TAG_BEGIN] .= $aText;
+    }
+    else {
+	# No, token isn't created;
+	    # Process token
+	$self->_processToken(HTML::TocGenerator::TT_TOKENTYPE_TEXT, $aText);
+    }
 }  # text()
 
 

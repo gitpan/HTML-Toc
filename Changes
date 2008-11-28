@@ -1,5 +1,18 @@
 Revision history for Perl extension HTML::Toc.
 
+2008-11-28   Freddy Vulto <fvulto@gmail.com>
+	Release 1.00
+
+	- Made ToC compliant to XHTML-1.0 STRICT:
+	  - attributes are now quoted;
+	  - nested ul's are embedded within li's;
+	  - anchor name tag is inserted within header tags instead of outside;
+	  - the inserted anchor name tag now is empty, i.e. immediately
+	    followed by </a>, to make nested anchor errors less likely to occur.
+	- Removed FileHandle dependency and added `:raw:utf8' layers when
+	  opening files.  This fixes CRLF issues under Windows (thanks to Dan
+	  Dascalescu).
+
 2008-11-20   Freddy Vulto <fvulto@gmail.com>
 	Release 0.92
 

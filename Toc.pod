@@ -903,13 +903,13 @@ Available options are:
 
 =over 4
 
-=item L<doGenerateToc|"doGenerateToc">
+=item * L<doGenerateToc|"doGenerateToc">
 
-=item L<doUseGroupsGlobal|"doUseGroupsGlobal">
+=item * L<doUseGroupsGlobal|"doUseGroupsGlobal">
 
-=item L<output|"output">
+=item * L<output|"output">
 
-=item L<outputFile|"outputFile">
+=item * L<outputFile|"outputFile">
 
 =back
 
@@ -1004,13 +1004,13 @@ The C<HTML::Toc> options can be grouped in the following categories:
 
 =over 4
 
-=item L<Generate options|"Generate options">
+=item * L<Generate options|"Generate options">
 
-=item L<Insert options|"Insert options">
+=item * L<Insert options|"Insert options">
 
-=item L<Update options|"Update options">
+=item * L<Update options|"Update options">
 
-=item L<Format options|"Format options">
+=item * L<Format options|"Format options">
 
 =back
 
@@ -1032,33 +1032,33 @@ The ToC options must be specified using the 'setOptions' method.  For example:
 
 =over 4
 
-=item Token groups
+=item * Token groups
 
 =over 4
 
-=item L<tokenToToc|"tokenToToc">
+=item * L<tokenToToc|"tokenToToc">
 
 =over 4
 
-=item L<doNumberToken|"doNumberToken">
+=item * L<doNumberToken|"doNumberToken">
 
-=item L<fileSpec|"fileSpec">
+=item * L<fileSpec|"fileSpec">
 
-=item L<groupId|"groupId">
+=item * L<groupId|"groupId">
 
-=item L<level|"level">
+=item * L<level|"level">
 
-=item L<tokenBegin|"tokenBegin">
+=item * L<tokenBegin|"tokenBegin">
 
-=item L<tokenEnd|"tokenEnd">
+=item * L<tokenEnd|"tokenEnd">
 
-=item L<numberingStyle|"numberingStyle">
+=item * L<numberingStyle|"numberingStyle">
 
 =back
 
-=item L<groupToToc|"groupToToc">
+=item * L<groupToToc|"groupToToc">
 
-=item L<levelToToc|"levelToToc">
+=item * L<levelToToc|"levelToToc">
 
 =back
 
@@ -1066,47 +1066,47 @@ The ToC options must be specified using the 'setOptions' method.  For example:
 
 =over 4
 
-=item L<doNumberToken|"doNumberToken">
+=item * L<doNumberToken|"doNumberToken">
 
-=item L<numberingStyle|"numberingStyle">
+=item * L<numberingStyle|"numberingStyle">
 
-=item L<templateTokenNumber|"templateTokenNumber">
-
-=back
-
-=item Miscellaneous
-
-=over 4
-
-=item L<attributeToExcludeToken|"attributeToExcludeToken">
-
-=item L<attributeToTocToken|"attributeToTocToken">
-
-=item L<groupToToc|"groupToToc">
-
-=item L<levelToToc|"levelToToc">
+=item * L<templateTokenNumber|"templateTokenNumber">
 
 =back
 
-=item Linking ToC to tokens
+=item * Miscellaneous
 
 =over 4
 
-=item L<doLinkToToken|"doLinkToToken">
+=item * L<attributeToExcludeToken|"attributeToExcludeToken">
 
-=item L<doLinkToFile|"doLinkToFile">
+=item * L<attributeToTocToken|"attributeToTocToken">
 
-=item L<doLinkToId|"doLinkToId">
+=item * L<groupToToc|"groupToToc">
 
-=item L<templateAnchorName|"templateAnchorName">
+=item * L<levelToToc|"levelToToc">
 
-=item L<templateAnchorHrefBegin|"templateAnchorHrefBegin">
+=back
 
-=item L<templateAnchorHrefEnd|"templateAnchorHrefEnd">
+=item * Linking ToC to tokens
 
-=item L<templateAnchorNameBegin|"templateAnchorNameBegin">
+=over 4
 
-=item L<templateAnchorNameEnd|"templateAnchorNameEnd">
+=item * L<doLinkToToken|"doLinkToToken">
+
+=item * L<doLinkToFile|"doLinkToFile">
+
+=item * L<doLinkToId|"doLinkToId">
+
+=item * L<templateAnchorName|"templateAnchorName">
+
+=item * L<templateAnchorHrefBegin|"templateAnchorHrefBegin">
+
+=item * L<templateAnchorHrefEnd|"templateAnchorHrefEnd">
+
+=item * L<templateAnchorNameBegin|"templateAnchorNameBegin">
+
+=item * L<templateAnchorNameEnd|"templateAnchorNameEnd">
 
 =back
 
@@ -1116,7 +1116,7 @@ The ToC options must be specified using the 'setOptions' method.  For example:
 
 =over 4
 
-=item L<insertionPoint|"insertionPoint">
+=item * L<insertionPoint|"insertionPoint">
 
 =back
 
@@ -1124,17 +1124,17 @@ The ToC options must be specified using the 'setOptions' method.  For example:
 
 =over 4
 
-=item L<tokenUpdateBeginAnchorName|"tokenUpdateBeginAnchorName">
+=item * L<tokenUpdateBeginAnchorName|"tokenUpdateBeginAnchorName">
 
-=item L<tokenUpdateEndAnchorName|"tokenUpdateEndAnchorName">
+=item * L<tokenUpdateEndAnchorName|"tokenUpdateEndAnchorName">
 
-=item L<tokenUpdateBeginToc|"tokenUpdateBeginToc">
+=item * L<tokenUpdateBeginToc|"tokenUpdateBeginToc">
 
-=item L<tokenUpdateEndToc|"tokenUpdateEndToc">
+=item * L<tokenUpdateEndToc|"tokenUpdateEndToc">
 
-=item L<tokenUpdateBeginNumber|"tokenUpdateBeginNumber">
+=item * L<tokenUpdateBeginNumber|"tokenUpdateBeginNumber">
 
-=item L<tokenUpdateEndNumber|"tokenUpdateEndNumber">
+=item * L<tokenUpdateEndNumber|"tokenUpdateEndNumber">
 
 =back
 
@@ -1142,23 +1142,23 @@ The ToC options must be specified using the 'setOptions' method.  For example:
 
 =over 4
 
-=item L<doSingleStepLevel|"doSingleStepLevel">
+=item * L<doSingleStepLevel|"doSingleStepLevel">
 
-=item L<doNestGroup|"doNestGroup">
+=item * L<doNestGroup|"doNestGroup">
 
-=item L<footer|"footer">
+=item * L<footer|"footer">
 
-=item L<groupToToc|"groupToToc">
+=item * L<groupToToc|"groupToToc">
 
-=item L<header|"header">
+=item * L<header|"header">
 
-=item L<levelIndent|"levelIndent">
+=item * L<levelIndent|"levelIndent">
 
-=item L<levelToToc|"levelToToc">
+=item * L<levelToToc|"levelToToc">
 
-=item L<templateLevelBegin|"templateLevelBegin">
+=item * L<templateLevelBegin|"templateLevelBegin">
 
-=item L<templateLevelEnd|"templateLevelEnd">
+=item * L<templateLevelEnd|"templateLevelEnd">
 
 =back
 
@@ -1698,14 +1698,13 @@ since anchor names aren't allowed to be nested according to the HTML 4.01 specif
 
 =head1 AUTHOR
 
-Freddy Vulto E<lt>L<"fvu@fvu.myweb.nl">E<gt>
+Freddy Vulto E<lt>L<"fvulto@gmail.com">E<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 Freddy Vulto.  All rights reserved.
+Copyright (c) 2008 Freddy Vulto.  All rights reserved.
 
 This library is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
 
 =cut
-

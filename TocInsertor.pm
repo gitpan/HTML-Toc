@@ -4,6 +4,12 @@
 # note:     - The term 'propagate' is used as a shortcut for the process of 
 #             both generating and inserting a ToC at the same time.
 #           - 'TIP' is an abbreviation of 'Toc Insertion Point'.
+#           - `scene' ?
+#           - The term `scenario' is used for the output, which is seen as one
+#             long story (scenario), split in scenes:
+#             +-------------------scenario--------------------+
+#             +--scene--+--toc--+--scene--+--scene--+--scene--+
+
 
 
 package HTML::TocInsertor;
@@ -16,7 +22,7 @@ use HTML::TocGenerator;
 BEGIN {
     use vars qw(@ISA $VERSION);
 
-    $VERSION = '1.00';
+    $VERSION = '1.10';
 
     @ISA = qw(HTML::TocGenerator);
 }
@@ -108,7 +114,7 @@ sub _initializeOutput {
 	    # Indicate to output to outputfile
 	$doOutputToFile = 1;
 	    # Open file
-	open $self->{_outputFileHandle}, ">:raw:utf8", $self->{options}{'outputFile'} 
+	open $self->{_outputFileHandle}, ">", $self->{options}{'outputFile'} 
 	    or die "Can't create $self->{options}{'outputFile'}: $!";
 
 	    # Backup currently selected filehandle
@@ -401,6 +407,7 @@ sub _processTocInsertionPoint {
 		# Add ToC reference to scenario reference by calling 'toc' method
 	    $self->toc($self->{_scenarioBeforeToken}, $tipToc);
 	    #push(@{$self->{_scenarioBeforeToken}}, $tipTokenToc);
+	    $self->{_doOutputInsertionPointToken} = ! $self->{_isTocToken};
 	    last SWITCH;
 	}
 	    # Output ToC after token?
@@ -411,6 +418,7 @@ sub _processTocInsertionPoint {
 		# Add ToC reference to scenario reference by calling 'toc' method
 	    $self->toc($self->{_scenarioAfterToken}, $tipToc);
 	    #push(@{$self->{_scenarioAfterToken}}, $tipTokenToc);
+	    $self->{_doOutputInsertionPointToken} = ! $self->{_isTocToken};
 	    last SWITCH;
 	}
     }
@@ -431,19 +439,22 @@ sub _processTocInsertionPoints {
     push(@{$self->{_scenario}}, @{$self->{_scenarioBeforeToken}});
 
     if ($outputPrefix = $self->{_outputPrefix}) {
-	push(@{$self->{_scenario}}, \$outputPrefix);
-	$self->{_outputPrefix} = "";
+        push(@{$self->{_scenario}}, \$outputPrefix);
+	#$self->_writeOrBufferOutput(\$outputPrefix);
+        $self->{_outputPrefix} = "";
     }
 
-	# Must insertion point token be output?
+        # Must insertion point token be output?
     if ($self->{_doOutputInsertionPointToken}) {
-	# Yes, output insertion point token;
-	push(@{$self->{_scenario}}, \$aTokenText);
+        # Yes, output insertion point token;
+        push(@{$self->{_scenario}}, \$aTokenText);
+	#$self->_writeOrBufferOutput(\$aTokenText);
     }
 
     if ($outputSuffix = $self->{_outputSuffix}) {
-	push(@{$self->{_scenario}}, \$outputSuffix);
-	$self->{_outputSuffix} = "";
+        push(@{$self->{_scenario}}, \$outputSuffix);
+	#$self->_writeOrBufferOutput(\$outputSuffix);
+        $self->{_outputSuffix} = "";
     }
 
     push(@{$self->{_scenario}}, @{$self->{_scenarioAfterToken}});
@@ -457,7 +468,6 @@ sub _processTocInsertionPoints {
     $self->{_scenarioAfterToken}  = [];
 	# Reset bias value to output insertion point token
     $self->{_doOutputInsertionPointToken} = 1;
-
 }  # _processTocInsertionPoints()
 
 
@@ -546,33 +556,24 @@ sub _writeOrBufferOutput {
     my ($self, $aOutput) = @_;
 
 	# Add possible output prefix and suffix
-	# If both anchor name begin and anchor name end are written, switch them
-	# NOTE: This is the case when a token triggers both `anchorNameBegin' and
-	#       `anchorNameEnd', e.g. with token: <img/>
-   if ($self->{_writingAnchorName}) {
-       $aOutput = $self->{_outputSuffix} . $aOutput . $self->{_outputPrefix};
-       $self->{_writingAnchorName} = 0;
-   } else {
-       $aOutput = $self->{_outputPrefix} . $aOutput . $self->{_outputSuffix};
-   } # if
-	# Reset anchor-name-begin flag
-    $self->{_writingAnchorNameBegin} = 0;
+    $aOutput = $self->{_outputPrefix} . $aOutput . $self->{_outputSuffix};
 	# Clear output prefix and suffix
     $self->{_outputPrefix} = "";
     $self->{_outputSuffix} = "";
 
-	# Has ToC insertion point been passed?
-    if ($self->{_isTocInsertionPointPassed}) {
-	# Yes, ToC insertion point has been passed;
-	    # Buffer output; add output to last '_scenario' item
-	my $index = scalar(@{$self->{_scenario}}) - 1;
-	${$self->{_scenario}[$index]} .= $aOutput;
-    }
-    else {
-	# No, ToC insertion point hasn't been passed;
-	    # Write output
-	$self->_writeOutput($aOutput);
-    }
+    if ($self->{_doReleaseElement}) {
+	    # Has ToC insertion point been passed?
+	if ($self->{_isTocInsertionPointPassed}) {
+	    # Yes, ToC insertion point has been passed;
+		# Buffer output; add output to last '_scenario' item
+	    my $index = scalar(@{$self->{_scenario}}) - 1;
+	    ${$self->{_scenario}[$index]} .= $aOutput;
+	} else {
+	    # No, ToC insertion point hasn't been passed;
+		# Write output
+	    $self->_writeOutput($aOutput);
+	} # if
+    } # if
 }  # _writeOrBufferOutput()
 
 
@@ -603,21 +604,21 @@ sub anchorId {
 }  # anchorId()
 
 
-#--- HTML::TocInsertor::anchorNameBegin() -------------------------------------
-# function: Process anchor name begin, generated by HTML::TocGenerator.
-# args:     - $aAnchorNameBegin: Anchor name begin tag to output.
-#           - $aToc: Reference to ToC to which anchorname belongs.
+#--- HTML::TocInsertor::afterAnchorNameBegin() -------------------------
+# Extend ancestor method.
+# @see HTML::TocGenerator::afterAnchorNameBegin
 
-sub anchorNameBegin {
+sub afterAnchorNameBegin {
 	# Get arguments
     my ($self, $aAnchorNameBegin, $aToc) = @_;
 	# Store anchor name as output suffix
-    $self->{_outputSuffix} = $aAnchorNameBegin;
+    #$self->{_outputSuffix} = $aAnchorNameBegin;
+    $self->{_holdChildren} = $aAnchorNameBegin . $self->{_holdChildren};
 	# Indicate anchor name is being written
     $self->{_writingAnchorNameBegin} = 1;
 	# Indicate anchor name end must be output
     $self->{_doOutputAnchorNameEnd} = 1;
-}   # anchorNameBegin()
+} # afterAnchorNameBegin()
 
 
 #--- HTML::TocInsertor::anchorNameEnd() ---------------------------------------
@@ -762,8 +763,30 @@ sub number {
 	# Get arguments
     my ($self, $aNumber, $aToc) = @_;
 	# Store heading number as output suffix
-    $self->{_outputSuffix} .= $aNumber;
+    #$self->{_outputSuffix} .= $aNumber;
+    #$self->_writeOrBufferOutput($aNumber);
+    $self->{_holdChildren} = $aNumber . $self->{_holdChildren};
 }   # number()
+
+
+#--- HTML::TocInsertor::_processTocStartingToken() ---------------------------
+# Extend ancestor method.
+
+sub _processTocStartingToken {
+	# Get arguments
+    my ($self, $aTocToken, $aTokenType, $aTokenAttributes, $aTokenOrig) = @_;
+    $self->SUPER::_processTocStartingToken($aTocToken, $aTokenType, $aTokenAttributes, $aTokenOrig);
+	# Was attribute used as ToC text?
+    if (defined($aTocToken->[HTML::TocGenerator::TT_ATTRIBUTES_TOC])) {
+        # Yes, attribute was used as ToC text;
+            # Output children - containing anchor name only - before toc element
+        $self->_writeOrBufferOutput($self->{_holdChildren} . $self->{_holdBeginTokenOrig});
+    } else {
+	# No, attribute wasn't used as ToC text;
+	    # Output children - including anchor name - within toc element
+	$self->_writeOrBufferOutput($self->{_holdBeginTokenOrig} . $self->{_holdChildren});
+    } # if
+} # _processTocStartingToken()
 
 
 #--- HTML::TocInsertor::propagateFile() ---------------------------------------
@@ -799,21 +822,21 @@ sub propagateFile {
 #                case).
 #           - $aAttrSeq: reference to array containing all tag attributes (in 
 #                lower case) in the original order
-#           - $aOrigText: the original HTML text
+#           - $aTokenOrig: the original token string
 
 sub start {
 	# Get arguments
-    my ($self, $aTag, $aAttr, $aAttrSeq, $aOrigText) = @_;
+    my ($self, $aTag, $aAttr, $aAttrSeq, $aTokenOrig) = @_;
 	# Local variables
     my ($doOutput, $i, $tocToken, $tag, $anchorId);
 	# Let ancestor process the start tag
-    $self->SUPER::start($aTag, $aAttr, $aAttrSeq, $aOrigText);
+    $self->SUPER::start($aTag, $aAttr, $aAttrSeq, $aTokenOrig);
 	# Must ToC be inserted?
     if ($self->{hti__Mode} & MODE_DO_INSERT) {
 	# Yes, ToC must be inserted;
 	    # Processing start tag as ToC insertion point is successful?
 	if (! $self->_processTokenAsInsertionPoint(
-	    HTML::TocGenerator::TT_TOKENTYPE_START, $aTag, $aAttr, $aOrigText
+	    HTML::TocGenerator::TT_TOKENTYPE_START, $aTag, $aAttr, $aTokenOrig
 	)) {
 	    # No, start tag isn't a ToC insertion point;
 		# Add anchor id?
@@ -828,19 +851,23 @@ sub start {
 		    # Yes, attribute 'id' already exists;
 			# Show warning
 		    print STDERR "WARNING: Overwriting existing id attribute '" .
-			$aAttr->{id} . "' of tag $aOrigText\n";
+			$aAttr->{id} . "' of tag $aTokenOrig\n";
 		    
 			# Add anchor id to start tag
-		    $aOrigText =~ s/(id)=\S*([\s>])/$1=$anchorId$2/i;
+		    $aTokenOrig =~ s/(id)=\S*([\s>])/$1=$anchorId$2/i;
 		}
 		else {
 		    # No, attribute 'id' doesn't exist;
 			# Add anchor id to start tag
-		    $aOrigText =~ s/>/ id=$anchorId>/;
+		    $aTokenOrig =~ s/>/ id=$anchorId>/;
 		}
-	    }
-		# Output start tag normally
-	    $self->_writeOrBufferOutput($aOrigText);
+	    } # if
+		# Is start tag a ToC token?
+	    if (! $self->{_isTocToken}) {
+		# No, start tag isn't a ToC token;
+		    # Output start tag normally
+		$self->_writeOrBufferOutput($aTokenOrig);
+	    } # if
 	}
     }
 }  # start()

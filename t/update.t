@@ -27,7 +27,7 @@ BEGIN {
 		# Create test file
 	$filename = "file$$.htm";
 	die "$filename is already there" if -e $filename;
-	open my $file, ">:raw:utf8", $filename or die "Can't create $filename: $!";
+	open my $file, ">", $filename or die "Can't create $filename: $!";
 	print $file <<'EOT'; close $file;
 <h1>Header</h1>
 EOT

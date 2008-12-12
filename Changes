@@ -1,5 +1,17 @@
 Revision history for Perl extension HTML::Toc.
 
+2008-12-12   Freddy Vulto <fvulto@gmail.com>
+	Release 1.10
+	- additional paramaters `text' and `children' are now passed to
+	  `templateAnchorName'.  To make this possible, internals have been
+	  changed to defer processing of a ToC item (matched on a start tag -
+	  at which processing used to take place immediately), until the
+	  matching `end' tag is passed.  
+	- Reverted addition of `:raw:utf8' layers (v1.00), because CPAN Testers
+	  reported "Unknown open() mode '>:raw:utf8'" on Perl-5.6.2.  CRLF test
+	  issues under Windows can be addressed instead by setting `set
+	  PERLIO=perlio' before running `make test'.
+
 2008-11-28   Freddy Vulto <fvulto@gmail.com>
 	Release 1.00
 

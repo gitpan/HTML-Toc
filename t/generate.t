@@ -4,7 +4,7 @@
 use strict;
 use Test;
 
-BEGIN { plan tests => 13; }
+BEGIN { plan tests => 14; }
 
 use HTML::Toc;
 use HTML::TocGenerator;
@@ -199,3 +199,29 @@ ok($toc->format() . "\n", <<HTML);
 <li>Appendix</li>
 </ul>
 HTML
+
+
+#--- 14. text and children passed to templateAnchorName ----------------
+
+sub AssembleAnchorName {
+		# Get arguments
+	my ($aFile, $aGroupId, $aLevel, $aNode, $aText, $aChildren) = @_;
+		# Return value
+	return $aChildren;
+}  # AssembleAnchorHrefBegin()
+
+	# Set options
+$toc->setOptions({
+    'doLinkToToken' => 1,
+    'tokenToToc' => [{
+	'level'      => 1,
+	'tokenBegin' => '<h1>'
+    }],
+    'templateAnchorName' => \&AssembleAnchorName
+});
+	# Generate ToC
+$tocGenerator->generate($toc, '<h1><b>very</b> important</h1>');
+	# Test ToC
+ok($toc->format(), "<ul>\n<li><a href=\"#<b>very</b> important\">very important</a></li>\n</ul>");
+	# Reset options
+$toc->setOptions({'templateAnchorName' => undef});

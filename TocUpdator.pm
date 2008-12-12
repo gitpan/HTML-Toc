@@ -14,7 +14,7 @@ use Data::Dumper;
 BEGIN {
     use vars qw(@ISA $VERSION);
 
-    $VERSION = '1.00';
+    $VERSION = '1.10';
 
     @ISA = qw(HTML::TocInsertor);
 }
@@ -302,12 +302,13 @@ sub _updateFile {
 sub _writeOrBufferOutput {
 	# Get arguments
     my ($self, $aOutput) = @_;
-	# Delete output?
-    if (! $self->{_doDeleteTokens}) {
-	# No, don't delete output;
-	    # Call ancestor
-	$self->SUPER::_writeOrBufferOutput($aOutput);
-    }
+	# Delete tokens?
+    if ($self->{_doDeleteTokens}) {
+	# Yes, delete output;
+	$aOutput = '';
+    } # if
+	# Call ancestor
+    $self->SUPER::_writeOrBufferOutput($aOutput);
 }  # _writeOrBufferOutput()
 
 
@@ -316,23 +317,21 @@ sub _writeOrBufferOutput {
 # args:     - $aAnchorName: Anchor name begin tag to output.
 #           - $aToc: Reference to ToC to which anchorname belongs.
 
-sub anchorNameBegin {
+sub afterAnchorNameBegin {
 	# Get arguments
     my ($self, $aAnchorNameBegin, $aToc) = @_;
-	# Call ancestor
-    $self->SUPER::anchorNameBegin($aAnchorNameBegin);
 	# Must ToC be inserted or updated?
     if ($self->{htu__Mode} != MODE_DO_NOTHING) {
 	# Yes, ToC must be inserted or updated;
 	    # Surround anchor name with update tags
-	if ($self->{_outputSuffix}) {
-	    $self->{_outputSuffix} = 
-		$aToc->{_tokenUpdateBeginOfAnchorNameBegin} .
-		$self->{_outputSuffix} . 
-		$aToc->{_tokenUpdateEndOfAnchorNameBegin};
-	} # if
+	$aAnchorNameBegin = 
+	    $aToc->{_tokenUpdateBeginOfAnchorNameBegin} .
+	    $aAnchorNameBegin .
+	    $aToc->{_tokenUpdateEndOfAnchorNameBegin};
     } # if
-}   # anchorNameBegin()
+	# Call ancestor
+    $self->SUPER::afterAnchorNameBegin($aAnchorNameBegin, $aToc);
+}   # afterAnchorNameBegin()
 
 
 #--- HTML::TocUpdator::anchorNameEnd() ----------------------------------------
@@ -372,9 +371,6 @@ sub comment {
 	    # Updator is currently deleting tokens?
 	if ($self->{_doDeleteTokens}) {
 	    # Yes, tokens must be deleted;
-		# Call ancestor
-	    $self->SUPER::comment($aComment);
-
 		# Look for update end token
 
 		# Does comment matches update end token?
@@ -384,9 +380,11 @@ sub comment {
 		# Yes, comment matches update end token;
 		    # Indicate to stop deleting tokens
 		$self->{_doDeleteTokens} = 0;
-	    }
-	}
-	else {
+	    } else {
+		    # Call ancestor
+		$self->SUPER::comment($aComment);
+	    } # if
+	} else {
 	    # No, tokens mustn't be deleted;
 
 		# Look for update begin token
@@ -398,16 +396,16 @@ sub comment {
 		# Yes, comment matches update begin token;
 		    # Indicate to start deleting tokens
 		$self->{_doDeleteTokens} = 1;
-	    }
-		# Call ancestor
-	    $self->SUPER::comment($aComment);
-	}
-    }
-    else {
+	    } else {
+		    # Call ancestor
+		$self->SUPER::comment($aComment);
+	    } # if
+	} # if
+    } else {
 	# No, ToC mustn't be updated;
 	    # Call ancestor
 	$self->SUPER::comment($aComment);
-    }
+    } # if
 }  # comment()
 
 
@@ -554,6 +552,40 @@ sub _processTocText {
 	$self->SUPER::_processTocText($aText, $aToc);
     }
 }  # _processTocText()
+
+
+#--- HTML::TocUpdator::_processTocTokenChildren() ----------------------
+# function: Toc token children processing function.
+# args:     - $aText: Text to add to ToC.
+#           - $aToc: ToC to which text belongs.
+
+sub _processTocTokenChildren {
+	# Get arguments
+    my ($self, $aText, $aToc) = @_;
+	# Delete output?
+    if (! $self->{_doDeleteTokens}) {
+	# No, don't delete output;
+	    # Call ancestor
+	$self->SUPER::_processTocTokenChildren($aText, $aToc);
+    } # if
+}  # _processTocTokenChildren()
+
+
+#--- HTML::TocUpdator::_processTocTokenText() --------------------------
+# function: Toc token text processing function.
+# args:     - $aText: Text to add to ToC.
+#           - $aToc: ToC to which text belongs.
+
+sub _processTocTokenText {
+	# Get arguments
+    my ($self, $aText, $aToc) = @_;
+	# Delete output?
+    if (! $self->{_doDeleteTokens}) {
+	# No, don't delete output;
+	    # Call ancestor
+	$self->SUPER::_processTocTokenText($aText, $aToc);
+    } # if
+}  # _processTocTokenText()
 
 
 #--- HTML::TocUpdator::update() -----------------------------------------------

@@ -13,14 +13,13 @@ use HTML::Parser;
 BEGIN {
     use vars qw(@ISA $VERSION);
 
-    $VERSION = '1.00';
+    $VERSION = '1.10';
 
     @ISA = qw(HTML::Parser);
 }
 
 
     # Warnings
-use constant WARNING_NESTED_ANCHOR_PS_WITHIN_PS		      => 1;
 use constant WARNING_TOC_ATTRIBUTE_PS_NOT_AVAILABLE_WITHIN_PS => 2;
 
 
@@ -30,6 +29,9 @@ use constant TOC_TOKEN_EXCLUDE	=> 2;
 use constant TOC_TOKEN_TOKENS	=> 3;
 use constant TOC_TOKEN_GROUP	=> 4;
 use constant TOC_TOKEN_TOC	=> 5;
+
+use constant CONTAINMENT_INCLUDE => 0;
+use constant CONTAINMENT_EXCLUDE => 1;
 
     # Token types
 use constant TT_TAG_BEGIN		 => 0;
@@ -42,10 +44,6 @@ use constant TT_EXCLUDE_ATTRIBUTES_END	 => 6;
 use constant TT_GROUP			 => 7;
 use constant TT_TOC			 => 8;
 use constant TT_ATTRIBUTES_TOC		 => 9;
-
-
-use constant CONTAINMENT_INCLUDE => 0;
-use constant CONTAINMENT_EXCLUDE => 1;
 
 use constant TT_TOKENTYPE_START        => 0;
 use constant TT_TOKENTYPE_END	       => 1;
@@ -69,6 +67,7 @@ sub new {
 	# Bias to not use global groups
     $self->{_doUseGroupsGlobal} = 0;
 	# Output
+    $self->{_doReleaseElement} = 1;
     $self->{output} = "";
 	# Reset internal variables
     $self->_resetBatchVariables();
@@ -441,7 +440,7 @@ sub _initializeGeneratorBatch {
 #	    - $aGroupLevel
 #	    - $aLinkType
 #	    - $aTokenAttributes: reference to hash containing attributes of 
-#		 currently parsed token
+#		 start token
 
 sub _linkTocToToken {
 	# Get arguments
@@ -450,20 +449,22 @@ sub _linkTocToToken {
 	$aDoLinkToId, $aTokenAttributes
     ) = @_;
 	# Local variables
-    my ($file, $groupId, $level, $node, $anchorName);
+    my ($anchorName, $children, $file, $groupId, $level, $node, $text);
     my ($doInsertAnchor, $doInsertId);
 
 	# Fill local arguments to be used by templates
-    $file    = $aFile;
-    $groupId = $aGroupId;
-    $level   = $aLevel;
-    $node    = $aNode;
+    $file     = $aFile;
+    $groupId  = $aGroupId;
+    $level    = $aLevel;
+    $node     = $aNode;
+    $text     = defined($self->{_holdText}) ? $self->{_holdText} : '';
+    $children = defined($self->{_holdChildren}) ? $self->{_holdChildren} : '';
     
 	# Assemble anchor name
     $anchorName = 
 	ref($aToc->{_templateAnchorName}) eq "CODE" ?
 	    &{$aToc->{_templateAnchorName}}(
-		$aFile, $aGroupId, $aLevel, $aNode
+		$aFile, $aGroupId, $aLevel, $aNode, $text, $children
 	    ) : 
 	    eval($aToc->{_templateAnchorName});
 
@@ -487,10 +488,8 @@ sub _linkTocToToken {
 		    # Indicate to not insert id
 		$doInsertId = 0;
 	    }
-	}
-
-    }
-    else {
+	} # if
+    } else {
 	# No, link to 'name';
 	    # Anchor name is currently active?
 	if (defined($self->{_activeAnchorName})) {
@@ -502,8 +501,7 @@ sub _linkTocToToken {
 		$anchorName = $self->{_activeAnchorName};
 		    # Indicate to not insert anchor name
 		$doInsertAnchor = 0;
-	    }
-	    else {
+	    } else {
 		# No, don't use existing anchors; insert new anchor;
 		    # 
 	    }
@@ -525,13 +523,15 @@ sub _linkTocToToken {
 	# Yes, anchor must be inserted;
 	    # Allow adding of anchor name begin token to text by calling 
 	    # 'anchorNameBegin' method
-	$self->anchorNameBegin(
-	    ref($aToc->{_templateAnchorNameBegin}) eq "CODE" ?
-		&{$aToc->{_templateAnchorNameBegin}}(
-		    $aFile, $aGroupId, $aLevel, $aNode, $anchorName
-		) :
-		eval($aToc->{_templateAnchorNameBegin}),
-	    $aToc
+	$self->afterAnchorNameBegin(
+	    $self->anchorNameBegin(
+		ref($aToc->{_templateAnchorNameBegin}) eq "CODE" ?
+		    &{$aToc->{_templateAnchorNameBegin}}(
+			$aFile, $aGroupId, $aLevel, $aNode, $anchorName
+		    ) :
+		    eval($aToc->{_templateAnchorNameBegin}),
+		$aToc
+	    ), $aToc
 	);
     }
 
@@ -613,9 +613,30 @@ sub _processTocEndingToken {
 	# Get arguments
     my ($self, $aTocToken) = @_;
 	# Local variables
-    my ($toc);
+    my ($text, $toc);
 	# Aliases
     $toc = $aTocToken->[TT_TOC];
+
+    $self->{_doReleaseElement} = 1;
+	# Process entire ToC element
+    $self->_processTocStartingToken(
+	$self->{_holdTocStartToken},
+	$self->{_holdBeginTokenType},
+	$self->{_holdBeginTokenAttributes},
+	$self->{_holdBeginTokenOrig}
+    );
+
+    $self->{_holdTocText} =~ s/\s*\n\s*/ /g;
+    $toc->{_toc} .= $self->{_holdTocText};
+
+    $self->{_holdTocStartToken}        = undef;
+    $self->{_holdBeginTokenType}       = undef;
+    $self->{_holdBeginTokenAttributes} = undef;
+    $self->{_holdBeginTokenOrig}       = undef;
+    $self->{_holdText}                 = undef;
+    $self->{_holdTocText}              = undef;
+    $self->{_holdChildren}             = undef;
+
 	# Link ToC to tokens?
     if ($toc->{options}{'doLinkToToken'}) {
 	# Yes, link ToC to tokens;
@@ -638,21 +659,20 @@ sub _processTocEndingToken {
 #		 _END, _TEXT, _COMMENT or _DECLARATION.
 #	    - $aTokenAttributes: reference to hash containing attributes of 
 #		 currently parsed token
-#	    - $aTokenOrigText: reference to original token text
+#	    - $aTokenOrig: reference to original token
 
 sub _processTocStartingToken {
 	# Get arguments
-    my ($self, $aTocToken, $aTokenType, $aTokenAttributes, $aTokenOrigText) = @_;
+    my ($self, $aTocToken, $aTokenType, $aTokenAttributes, $aTokenOrig) = @_;
 	# Local variables
     my ($i, $level, $doLinkToId, $node, $groupLevel);
     my ($file, $tocTokenId, $groupId, $toc, $attribute);
 	# Aliases
-    $file	 = $self->{_currentFile};
-    $toc	    = $aTocToken->[TT_TOC];
-    $level	= $aTocToken->[TT_GROUP]{'level'};
-    $groupId	    = $aTocToken->[TT_GROUP]{'groupId'};
+    $file    = $self->{_currentFile};
+    $toc     = $aTocToken->[TT_TOC];
+    $level   = $aTocToken->[TT_GROUP]{'level'};
+    $groupId = $aTocToken->[TT_GROUP]{'groupId'};
 
-	# Retrieve 'doLinkToId' setting from either group options or toc options
     $doLinkToId = (defined($aTocToken->[TT_GROUP]{'doLinkToId'})) ?
 	$aTocToken->[TT_GROUP]{'doLinkToId'} : $toc->{options}{'doLinkToId'}; 
     
@@ -683,8 +703,6 @@ sub _processTocStartingToken {
     }
     $groupLevel = $groupIdManager->{groupIdLevels}{$groupId};
 
-	# Temporarily allow symbolic references
-    #no strict qw(refs);
 	# Increase level
     $groupIdManager->{levels}{$groupId}[$level - 1] += 1;
 	# Reset remaining levels of same group
@@ -711,15 +729,6 @@ sub _processTocStartingToken {
 	$toc->{_toc} .= $aTokenAttributes->{id};
     }
     $toc->{_toc} .= " ";
-	# Link ToC to tokens?
-    if ($toc->{options}{'doLinkToToken'}) {
-	# Yes, link ToC to tokens;
-	    # Link ToC to token
-	$self->_linkTocToToken(
-	    $toc, $file, $groupId, $level, $node, $groupLevel, $doLinkToId,
-	    $aTokenAttributes
-	);
-    }
 
 	# Number tokens?
     if (
@@ -732,16 +741,26 @@ sub _processTocStartingToken {
 	# Yes, number tokens;
 	    # Add number by calling 'number' method
 	$self->number(
-	 $self->formatNumber(
-	       ref($toc->{_templateTokenNumber}) eq "CODE" ?
+	    $self->formatNumber(
+		ref($toc->{_templateTokenNumber}) eq "CODE" ?
 		&{$toc->{_templateTokenNumber}}(
 		    $node, $groupId, $file, $groupLevel, $level, $toc
 		) : 
 		eval($toc->{_templateTokenNumber}),
-	       $toc
-	 )
+		$toc
+	    )
 	);
-    }
+    } # if
+
+	# Link ToC to tokens?
+    if ($toc->{options}{'doLinkToToken'}) {
+	# Yes, link ToC to tokens;
+	    # Link ToC to token
+	$self->_linkTocToToken(
+	    $toc, $file, $groupId, $level, $node, $groupLevel, $doLinkToId,
+	    $aTokenAttributes, $self->{_holdChildren}
+	);
+    } # if
 
 	# Must attribute be used as ToC text?
     if (defined($aTocToken->[TT_ATTRIBUTES_TOC])) {
@@ -759,28 +778,19 @@ sub _processTocStartingToken {
 		    # Show warning
 		$self->_showWarning(
 		    WARNING_TOC_ATTRIBUTE_PS_NOT_AVAILABLE_WITHIN_PS,
-		    [$attribute, $$aTokenOrigText]
+		    [$attribute, $$aTokenOrig]
 		);
 	    }
 		# Output anchor name end only if necessary
 	    #$self->_outputAnchorNameEndConditionally($toc);
-		# End attribute
-	    $self->_processTocEndingToken($aTocToken);
 	}
-    }
-    else {
-	# No, attribute mustn't be used as ToC text;
-	    # Add end token to 'end token array'
-	push(
-	    @{$self->{_tokensTocEnd}[$aTocToken->[TT_TAG_TYPE_END]]}, $aTocToken
-	);
     }
 }  # _processTocStartingToken()
 
 
 #--- HTML::TocGenerator::_processTocText() ------------------------------------
 # function: This function processes text which must be added to the preliminary
-#	    ToC.
+#           (non-formatted) ToC.
 # args:     - $aText: Text to add to ToC.
 #	    - $aToc: ToC to add text to.
 
@@ -788,8 +798,49 @@ sub _processTocText {
 	# Get arguments
     my ($self, $aText, $aToc) = @_;
 	# Add text to ToC
-    $aToc->{_toc} .= $aText;
+    if (defined($self->{_holdTocText})) {
+	$self->{_holdTocText}  .= $aText;
+    } else {
+	    # Remove possible newlines from text
+	$aText =~ s/\s*\n\s*/ /g;
+	$aToc->{_toc} .= $aText;
+    } # if
 }  # _processTocText()
+
+
+#--- HTML::TocGenerator::_processTocTokenChildren() --------------------
+# function: This function processes children which resides inside a ToC token.
+# args:     - $aText
+#	    - $aToc: ToC to which token belongs
+
+sub _processTocTokenChildren {
+	# Get arguments
+    my ($self, $aText, $aToc) = @_;
+	# Must children be put on hold?
+    if (defined($self->{_holdChildren})) {
+	# Yes, children must be put on hold;
+	    # Add children to hold buffer
+	$self->{_holdChildren} .= $aText;
+    } # if
+}  # _processTocTokenChildren()
+
+
+#--- HTML::TocGenerator::_processTocTokenText() ---------------------------
+# function: This function processes text which resides inside a ToC token.
+# args:     - $aText
+#	    - $aToc: ToC to which token belongs
+
+sub _processTocTokenText {
+	# Get arguments
+    my ($self, $aText, $aToc) = @_;
+	# Must text be put on hold?
+    if (defined($self->{_holdText})) {
+	# Yes, text must be put on hold;
+	    # Add text to hold buffers
+	$self->{_holdText}     .= $aText;
+	$self->{_holdChildren} .= $aText;
+    } # if
+}  # _processTocTokenText()
 
 
 #--- HTML::TocGenerator::_processTokenAsTocEndingToken() ----------------------
@@ -838,13 +889,13 @@ sub _processTokenAsTocEndingToken {
 #	    - $aTokenId: token id of currently parsed token
 #	    - $aTokenAttributes: reference to hash containing attributes of 
 #		 currently parsed token
-#	    - $aTokenOrigText: reference to original text of token
+#	    - $aTokenOrig: reference to original token string
 # returns:  1 if successful, i.e. token is processed as ToC-starting-token, 0
 #	    if not.
 
 sub _processTokenAsTocStartingToken {
 	# Get arguments
-    my ($self, $aTokenType, $aTokenId, $aTokenAttributes, $aTokenOrigText) = @_;
+    my ($self, $aTokenType, $aTokenId, $aTokenAttributes, $aTokenOrig) = @_;
 	# Local variables
     my ($level, $levelToToc, $groupId, $groupToToc);
     my ($result, $tocToken, $tagBegin, @tokensTocBegin, $fileSpec);
@@ -887,10 +938,34 @@ sub _processTokenAsTocStartingToken {
 		    # Yes, level and group must be processed;
 			# Indicate token acts as ToC-starting-token
 		    $result = 1;
-			# Process ToC-starting-token
-		    $self->_processTocStartingToken(
-			$tocToken, $aTokenType, $aTokenAttributes, $aTokenOrigText
-		    );
+			# Start buffering until `_processTokenAsTocEndingToken' returns true
+		    $self->{_holdTocStartToken} = $tocToken;
+		    $self->{_holdBeginTokenType} = $aTokenType;
+		    $self->{_holdBeginTokenAttributes} = $aTokenAttributes;
+		    $self->{_holdBeginTokenOrig} = $$aTokenOrig;
+		    $self->{_holdText} = '';
+		    $self->{_holdTocText} = '';
+		    $self->{_holdChildren}  = '';
+		    $self->{_doReleaseElement} = 0;
+
+			# Must attribute be used as ToC text?
+		    if (defined($tocToken->[TT_ATTRIBUTES_TOC])) {
+			# Yes, attribute must be used as ToC text;
+			#    # Indicate to not hold element
+			#$self->{_doReleaseElement} = 1;
+			#    # Process ToC-starting-token
+			#$self->_processTocStartingToken(
+			#    $tocToken, $aTokenType, $aTokenAttributes, $aTokenOrig
+			#);
+			    # End attribute
+			$self->_processTocEndingToken($tocToken);
+		    } else {
+			# No, attribute mustn't be used as ToC text;
+			    # Add end token to 'end token array'
+			push(
+			    @{$self->{_tokensTocEnd}[$tocToken->[TT_TAG_TYPE_END]]}, $tocToken
+			);
+		    } # if
 		}
 	    }
 	}
@@ -944,6 +1019,15 @@ sub _resetBatchVariables {
     $self->{_tocs} = [];
 	# Active anchor name
     $self->{_activeAnchorName} = undef;
+	# Hold space for toc triggering element
+	# The element will be processed as soon as the element ends
+    $self->{_holdTocStartToken}        = undef;
+    $self->{_holdBeginTokenType}       = undef;
+    $self->{_holdBeginTokenAttributes} = undef;
+    $self->{_holdBeginTokenOrig}       = undef;
+    $self->{_holdText}                 = undef;
+    $self->{_holdTocText}              = undef;
+    $self->{_holdChildren}             = undef;
 }  # _resetBatchVariables()
 
 
@@ -983,14 +1067,22 @@ sub _showWarning {
     my (%warnings);
 	# Set warnings
     %warnings = (
-	WARNING_NESTED_ANCHOR_PS_WITHIN_PS()		   => 
-	    "Nested anchor '%s' within anchor '%s'.", 
 	WARNING_TOC_ATTRIBUTE_PS_NOT_AVAILABLE_WITHIN_PS() =>
 	    "ToC attribute '%s' not available within token '%s'.",
     );
 	# Show warning
     print STDERR "warning ($aWarningNr): " . sprintf($warnings{"$aWarningNr"}, @$aWarningArgs) . "\n";
 }  # _showWarning()
+
+
+#--- HTML::TocGenerator::afterAnchorNameBegin() ------------------------
+# function: After anchor name begin processing method.  Leave it up to the
+#           descendant to do something useful with it.
+# args:     - $aAnchorName
+#	    - $aToc: Reference to ToC to which anchorname belongs.
+
+sub afterAnchorNameBegin {
+}  # anchorNameBegin()
 
 
 #--- HTML::TocGenerator::anchorId() -------------------------------------------
@@ -1010,6 +1102,9 @@ sub anchorId {
 #	    - $aToc: Reference to ToC to which anchorname belongs.
 
 sub anchorNameBegin {
+	# Get arguments
+    my ($self, $aAnchorName, $aToc) = @_;
+    return $aAnchorName;
 }  # anchorNameBegin()
 
 
@@ -1030,19 +1125,53 @@ sub anchorNameEnd {
 sub comment {
 	# Get arguments
     my ($self, $aComment) = @_;
+	# Bias to token not functioning as ToC-starting-token
+    $self->{_isTocToken} = 0;
 	# Must a ToC be generated?
     if ($self->{_doGenerateToc}) {
-	# Yes, a ToC must be generated
-	    # Process end tag as ToC-starting-token
-	$self->_processTokenAsTocStartingToken(
+	# Yes, a ToC must be generated;
+	    # Process comment as ToC-starting-token
+	    # Is comment a ToC-starting-token?
+	if (! ($self->{_isTocToken} = $self->_processTokenAsTocStartingToken(
 	    TT_TOKENTYPE_COMMENT, $aComment, undef, \$aComment
-	);
+	))) {
+		# No, comment isn't a ToC starting token;
+	    $self->_processTocTokenChildren('<!--' . $aComment . '-->');
+	} # if
 	    # Process end tag as token which ends ToC registration
 	$self->_processTokenAsTocEndingToken(
 	    TT_TOKENTYPE_COMMENT, $aComment
 	);
     }
 }  # comment()
+
+
+#--- HTML::TocGenerator::declaration() -----------------------------------------
+# function: This function is called every time a declaration is encountered
+#           by HTML::Parser.
+
+sub declaration {
+	# Get arguments
+    my ($self, $aDeclaration) = @_;
+	# Bias to token not functioning as ToC-starting-token
+    $self->{_isTocToken} = 0;
+	# Must a ToC be generated?
+    if ($self->{_doGenerateToc}) {
+	# Yes, a ToC must be generated
+	    # Process declaration as ToC-starting-token
+	    # Is declaration a ToC-starting-token?
+	if (! ($self->{_isTocToken} = $self->_processTokenAsTocStartingToken(
+	    TT_TOKENTYPE_DECLARATION, $aDeclaration, undef, \$aDeclaration
+	))) {
+		# No, declaration isn't a ToC-starting-token
+	    $self->_processTocTokenChildren('<!' . $aDeclaration . '>');
+	} # if
+	    # Process end tag as token which ends ToC registration
+	$self->_processTokenAsTocEndingToken(
+	    TT_TOKENTYPE_DECLARATION, $aDeclaration
+	);
+    }
+}  # declaration()
 
 
 #--- HTML::TocGenerator::end() ------------------------------------------------
@@ -1059,7 +1188,7 @@ sub end {
     if ($self->{_doGenerateToc}) {
 	# Yes, a ToC must be generated
 	    # Process end tag as ToC-starting-token
-	$self->_processTokenAsTocStartingToken(
+	$self->{_isTocToken} = $self->_processTokenAsTocStartingToken(
 	    TT_TOKENTYPE_END, $aTag, undef, \$aOrigText
 	);
 	    # Process end tag as ToC-ending-token
@@ -1072,6 +1201,9 @@ sub end {
 		# Reset dirty anchor
 	    $self->{_activeAnchorName} = undef;
 	}
+	if (! $self->{_isTocToken}) {
+	    $self->_processTocTokenChildren($aOrigText);
+	} # if
     }
 }  # end()
 
@@ -1216,43 +1348,31 @@ sub setOptions {
 #		 case).
 #	    - $aAttrSeq: reference to array containing all tag attributes (in 
 #		 lower case) in the original order
-#	    - $aOrigText: the original HTML text
+#	    - $aTokenOrig: the original token string
 
 sub start {
 	# Get arguments
-    my ($self, $aTag, $aAttr, $aAttrSeq, $aOrigText) = @_;
-    $self->{isTocToken} = 0;
-	# Start tag is of type 'anchor name'?
-    if ($aTag eq "a" && defined($aAttr->{name})) {
-	# Yes, start tag is of type 'anchor name';
-	    # Is another anchor already active?
-	if (defined($self->{_activeAnchorName})) {
-	    # Yes, another anchor is already active;
-		# Is the first anchor inserted by 'TocGenerator'?
-	    if ($self->{_doOutputAnchorNameEnd}) {
-		# Yes, the first anchor is inserted by 'TocGenerator';
-		    # Show warning
-		$self->_showWarning(
-		    WARNING_NESTED_ANCHOR_PS_WITHIN_PS,
-		    [$aOrigText, $self->{_activeAnchorName}]
-		);
-	    }
-	}
-	    # Set active anchor name
-	$self->_setActiveAnchorName($aAttr->{name});
-    }
+    my ($self, $aTag, $aAttr, $aAttrSeq, $aTokenOrig) = @_;
+	# Bias to token not functioning as ToC-starting-token
+    $self->{_isTocToken} = 0;
 	# Must a ToC be generated?
     if ($self->{_doGenerateToc}) {
 	# Yes, a ToC must be generated
 	    # Process start tag as ToC token
-	$self->{isTocToken} = $self->_processTokenAsTocStartingToken(
-	    TT_TOKENTYPE_START, $aTag, $aAttr, \$aOrigText
-	);
+	    # Is start tag a ToC token?
+	if (! ($self->{_isTocToken} = $self->_processTokenAsTocStartingToken(
+		TT_TOKENTYPE_START, $aTag, $aAttr, \$aTokenOrig
+	))) {
+		# No, start tag isn't ToC token
+	    $self->_processTocTokenChildren($aTokenOrig);
+	}
+
 	    # Process end tag as ToC-ending-token
 	$self->_processTokenAsTocEndingToken(
 	    TT_TOKENTYPE_START, $aTag
 	);
     }
+
 }  # start()
 
 
@@ -1278,10 +1398,10 @@ sub text {
 
 		    # Alias
 		$toc = $token->[TT_TOC];
-		    # Remove possible newlines from text
-		($text = $aText) =~ s/\s*\n\s*/ /g;
-		    # Add text to toc
-		$self->_processTocText($text, $toc);
+		    # Add text to ToC
+		$self->_processTocText($aText, $toc);
+		    # Process text inside token
+		$self->_processTocTokenText($aText, $toc);
 	    }
 	}
     }
@@ -1507,7 +1627,7 @@ sub declaration {
 
 sub end {
 	# Get arguments
-    my ($self, $aTag, $aOrigText) = @_;
+    my ($self, $aTag, $aTokenOrig) = @_;
 	# Process token
     $self->_processToken(HTML::TocGenerator::TT_TOKENTYPE_END, $aTag);
 }  # end()
@@ -1687,7 +1807,7 @@ sub comment {
 }  # comment()
 
 
-#--- HTML::_TokenTocDeclarationParser::declaration() --------------------------
+#--- HTML::_TokenTocEndParser::declaration() -------------------------
 # function: This function is called every time a markup declaration is
 #	    encountered by HTML::Parser.
 # args:     - $aDeclaration: Markup declaration.
@@ -1792,6 +1912,29 @@ sub text {
 	$self->_processToken(HTML::TocGenerator::TT_TOKENTYPE_TEXT, $aText);
     }
 }  # text()
+
+
+
+
+#=== HTML::_AnchorNameAssembler =============================================
+# function: Parse 'toc tokens'.  'Toc tokens' mark HTML code which is to be
+#	    inserted into the ToC.
+# note:     Used internally.
+
+package HTML::_AnchorNameAssembler;
+
+
+#--- HTML::_AnchorNameAssembler::new() ---------------------------------
+# function: Constructor
+# args:     - $aType: Class type.
+
+sub new {
+    my $class = shift;
+    my $self = {};
+    bless ($self, $class);
+	# Return instance
+    return $self;
+}  # new()
 
 
 1;

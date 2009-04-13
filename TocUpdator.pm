@@ -14,7 +14,7 @@ use Data::Dumper;
 BEGIN {
     use vars qw(@ISA $VERSION);
 
-    $VERSION = '1.10';
+    $VERSION = '1.11';
 
     @ISA = qw(HTML::TocInsertor);
 }

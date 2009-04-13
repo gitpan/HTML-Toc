@@ -22,7 +22,7 @@ use HTML::TocGenerator;
 BEGIN {
     use vars qw(@ISA $VERSION);
 
-    $VERSION = '1.10';
+    $VERSION = '1.11';
 
     @ISA = qw(HTML::TocGenerator);
 }
@@ -243,8 +243,7 @@ sub _insertIntoFile {
 	    # Yes, propagate;
 		# Generate and insert ToC
 	    $self->_generateFromFile($file);
-	}
-	else {
+	} else {
 	    # No, just insert ToC
 		# Insert by parsing file
 	    $self->parse_file($file);
@@ -267,22 +266,29 @@ sub _parseTocInsertionPoints {
     );
 	# Loop through ToCs
     foreach $toc (@{$self->{_tocs}}) {
-	    # Split TIP in preposition and token
-	($tipPreposition, $tipToken) = split(
-	    '\s+', $toc->{options}{'insertionPoint'}, 2
-	);
-	    # Known preposition?
-	if (
-	    ($tipPreposition ne TIP_PREPOSITION_REPLACE) &&
-	    ($tipPreposition ne TIP_PREPOSITION_BEFORE) &&
-	    ($tipPreposition ne TIP_PREPOSITION_AFTER)
-	) {
-	    # No, unknown preposition;
-		# Use default preposition
+	if (length $toc->{options}{'insertionPoint'}) {
+		# Split TIP in preposition and token
+	    ($tipPreposition, $tipToken) = split(
+		'\s+', $toc->{options}{'insertionPoint'}, 2
+	    );
+		# Known preposition?
+	    if (
+		($tipPreposition ne TIP_PREPOSITION_REPLACE) &&
+		($tipPreposition ne TIP_PREPOSITION_BEFORE) &&
+		($tipPreposition ne TIP_PREPOSITION_AFTER)
+	    ) {
+		# No, unknown preposition;
+		    # Use default 'after <body>'
+		$tipPreposition = TIP_PREPOSITION_AFTER;
+		    # Use entire 'insertionPoint' as token
+		$tipToken = $toc->{options}{'insertionPoint'};
+	    } # if
+	} else {
+	    # No, insertion point is empty string;
+		# Use default `after <body>'
 	    $tipPreposition = TIP_PREPOSITION_AFTER;
-		# Use entire 'insertionPoint' as token
-	    $tipToken = $toc->{options}{'insertionPoint'};
-	}
+	    $tipToken = '<body>';
+	} # if
 	    # Indicate current ToC to parser
 	$tokenTipParser->setToc($toc);
 	    # Indicate current preposition to parser
@@ -310,47 +316,52 @@ sub _processTokenAsInsertionPoint {
     my ($self, $aTokenType, $aTokenId, $aTokenAttributes, $aOrigText) = @_;
 	# Local variables
     my ($i, $result, $tipToken, $tipTokenId, $tipTokens);
-	# Bias to token not functioning as a ToC insertion point (Tip) token
-    $result = 0;
-	# Alias ToC insertion point (Tip) array of right type
-    $tipTokens = $self->{_tokensTip}[$aTokenType];
-	# Loop through tipTokens
-    $i = 0;
-    while ($i < scalar @{$tipTokens}) {
-	    # Aliases
-	$tipToken		     = $tipTokens->[$i];
-	$tipTokenId		     = $tipToken->[TIP_TOKEN_ID];
-	    # Id & attributes match?
-	if (
-	    ($aTokenId =~ m/$tipTokenId/) && (
-		HTML::TocGenerator::_doesHashContainHash(
-		    $aTokenAttributes, $tipToken->[TIP_INCLUDE_ATTRIBUTES], 0
-		) &&
-		HTML::TocGenerator::_doesHashContainHash(
-		    $aTokenAttributes, $tipToken->[TIP_EXCLUDE_ATTRIBUTES], 1
+	# Does token happen to be a ToC token, or is tip-tokentype <> TEXT?
+    if ($self->{_doReleaseElement} || $aTokenType != HTML::TocGenerator::TT_TOKENTYPE_TEXT) {
+	# No, token isn't a ToC token;
+	    # Bias to token not functioning as a ToC insertion point (Tip) token
+	$result = 0;
+	    # Alias ToC insertion point (Tip) array of right type
+	$tipTokens = $self->{_tokensTip}[$aTokenType];
+	    # Loop through tipTokens
+	$i = 0;
+	while ($i < scalar @{$tipTokens}) {
+		# Aliases
+	    $tipToken		     = $tipTokens->[$i];
+	    $tipTokenId		     = $tipToken->[TIP_TOKEN_ID];
+		# Id & attributes match?
+	    if (
+		($aTokenId =~ m/$tipTokenId/) && (
+		    HTML::TocGenerator::_doesHashContainHash(
+			$aTokenAttributes, $tipToken->[TIP_INCLUDE_ATTRIBUTES], 0
+		    ) &&
+		    HTML::TocGenerator::_doesHashContainHash(
+			$aTokenAttributes, $tipToken->[TIP_EXCLUDE_ATTRIBUTES], 1
+		    )
 		)
-	    )
-	) {
-	    # Yes, id and attributes match;
-		# Process ToC insertion point
-	    $self->_processTocInsertionPoint($tipToken);
-		# Indicate token functions as ToC insertion point
-	    $result = 1;
-		# Remove Tip token, automatically advancing to next token
-	    splice(@$tipTokens, $i, 1);
-	}
-	else {
-	    # No, tag doesn't match ToC insertion point
-		# Advance to next start token
-	    $i++;
-	}
-    }
-	# Token functions as ToC insertion point?
-    if ($result) {
-	# Yes, token functions as ToC insertion point;
-	    # Process insertion point(s)
-	$self->_processTocInsertionPoints($aOrigText);
-    }
+	    ) {
+		# Yes, id and attributes match;
+		    # Process ToC insertion point
+		$self->_processTocInsertionPoint($tipToken, $aTokenType);
+		    # Indicate token functions as ToC insertion point
+		$result = 1;
+		    # Remove Tip token, automatically advancing to next token
+		splice(@$tipTokens, $i, 1);
+	    } else {
+		# No, tag doesn't match ToC insertion point
+		    # Advance to next start token
+		$i++;
+	    } # if
+	} # while
+	    # Token functions as ToC insertion point?
+	if ($result) {
+	    # Yes, token functions as ToC insertion point;
+		# Process insertion point(s)
+	    $self->_processTocInsertionPoints($aOrigText);
+	} # if
+    } else {
+	$result = 0;
+    } // if
 	# Return value
     return $result;
 }  # _processTokenAsInsertionPoint()
@@ -375,16 +386,23 @@ sub toc {
 # function: Process ToC insertion point.
 # args:     - $aTipToken: Reference to token array item which matches the ToC 
 #                insertion point.
+#           - $aTokenType: type of token: start, end, comment or text.
 
 sub _processTocInsertionPoint {
 	# Get arguments
-    my ($self, $aTipToken) = @_;
+    my ($self, $aTipToken, $aTokenType) = @_;
 	# Local variables
     my ($tipToc, $tipPreposition); 
     
 	# Aliases
     $tipToc         = $aTipToken->[TIP_TOC];
     $tipPreposition = $aTipToken->[TIP_PREPOSITION];
+
+	# If TipToken is of type TEXT, prepend possible preceding string
+    if ($aTokenType == HTML::TocGenerator::TT_TOKENTYPE_TEXT && length $`) {
+	my $prepend = $`;
+	push(@{$self->{_scenarioBeforeToken}}, \$prepend);
+    } # if
 
     SWITCH: {
 	    # Replace token with ToC?
@@ -394,11 +412,10 @@ sub _processTocInsertionPoint {
 	    $self->{_isTocInsertionPointPassed} = 1;
 		# Add ToC reference to scenario reference by calling 'toc' method
 	    $self->toc($self->{_scenarioAfterToken}, $tipToc);
-	    #push(@{$self->{_scenarioAfterToken}}, $tipTokenToc);
 		# Indicate token itself must not be output
 	    $self->{_doOutputInsertionPointToken} = 0;
 	    last SWITCH;
-	}
+	} # if
 	    # Output ToC before token?
 	if ($tipPreposition eq TIP_PREPOSITION_BEFORE) {
 	    # Yes, output ToC before token;
@@ -406,22 +423,40 @@ sub _processTocInsertionPoint {
 	    $self->{_isTocInsertionPointPassed} = 1;
 		# Add ToC reference to scenario reference by calling 'toc' method
 	    $self->toc($self->{_scenarioBeforeToken}, $tipToc);
-	    #push(@{$self->{_scenarioBeforeToken}}, $tipTokenToc);
-	    $self->{_doOutputInsertionPointToken} = ! $self->{_isTocToken};
+		# Add token text
+	    if ($aTokenType == HTML::TocGenerator::TT_TOKENTYPE_TEXT) {
+		my $text = $&;
+		push(@{$self->{_scenarioBeforeToken}}, \$text);
+		$self->{_doOutputInsertionPointToken} = 0;
+	    } else {
+		$self->{_doOutputInsertionPointToken} = ! $self->{_isTocToken};
+	    } # if
 	    last SWITCH;
-	}
+	} # if
 	    # Output ToC after token?
 	if ($tipPreposition eq TIP_PREPOSITION_AFTER) {
 	    # Yes, output ToC after token;
 		# Indicate ToC insertion point has been passed
 	    $self->{_isTocInsertionPointPassed} = 1;
+		# Add token text
+	    if ($aTokenType == HTML::TocGenerator::TT_TOKENTYPE_TEXT) {
+		my $text = $&;
+		$self->toc($self->{_scenarioAfterToken}, \$text);
+		$self->{_doOutputInsertionPointToken} = 0;
+	    } else {
+		$self->{_doOutputInsertionPointToken} = ! $self->{_isTocToken};
+	    } # if
 		# Add ToC reference to scenario reference by calling 'toc' method
 	    $self->toc($self->{_scenarioAfterToken}, $tipToc);
-	    #push(@{$self->{_scenarioAfterToken}}, $tipTokenToc);
-	    $self->{_doOutputInsertionPointToken} = ! $self->{_isTocToken};
 	    last SWITCH;
-	}
-    }
+	} # if
+    } # SWITCH
+
+	# If TipToken is of type TEXT, append possible following string
+    if ($aTokenType == HTML::TocGenerator::TT_TOKENTYPE_TEXT && length $') {
+	my $append = $';
+	push(@{$self->{_scenarioAfterToken}}, \$append);
+    } # if
 }  # _processTocInsertionPoint()
 
 

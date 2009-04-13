@@ -2,9 +2,8 @@
 # function: Test ToC propagation.
 
 use strict;
-use Test;
-
-BEGIN { plan tests => 10; }
+use Test::More tests => 10;
+use Test::Differences;
 
 use HTML::Toc;
 use HTML::TocGenerator;
@@ -44,20 +43,20 @@ END {
 #--- 1. propagate -------------------------------------------------------------
 
 $tocInsertor->insert($toc, "<h1>Header</h1>", {'output' => \$output});
-ok($output, "<ul>\n<li>Header</li>\n</ul><h1>Header</h1>");
+eq_or_diff($output, "<ul>\n<li>Header</li>\n</ul><h1>Header</h1>", 'propagate');
 
 
 #--- 2. propagateFile ---------------------------------------------------------
 
 $tocInsertor->insertIntoFile($toc, $filename, {'output' => \$output});
-ok($output, "<ul>\n<li>Header</li>\n</ul><h1>Header</h1>\n");
+eq_or_diff($output, "<ul>\n<li>Header</li>\n</ul><h1>Header</h1>\n", 'propagateFile');
 
 
 #--- 3. doLinkToToken -----------------------------------------------------
 
 $toc->setOptions({'doLinkToToken' => 1});
 $tocInsertor->insert($toc, "<h1>Header</h1>", {'output' => \$output});
-ok("$output\n", <<'EOT');
+eq_or_diff("$output\n", <<'EOT', 'doLinkToToken');
 <ul>
 <li><a href="#h-1">Header</a></li>
 </ul><h1><a name="h-1"></a>Header</h1>
@@ -70,7 +69,11 @@ $toc->setOptions(
 	{'templateAnchorHrefBegin' => '"<$node${file}test${groupId}>"'}
 );
 $tocInsertor->insertIntoFile($toc, $filename, {'output' => \$output});
-ok($output, "<ul>\n<li><1${filename}testh>Header</a></li>\n</ul><h1><a name=\"h-1\"></a>Header</h1>\n");
+eq_or_diff(
+    $output,
+    "<ul>\n<li><1${filename}testh>Header</a></li>\n</ul><h1><a name=\"h-1\"></a>Header</h1>\n",
+    'templateAnchorHrefBegin'
+);
 $toc->setOptions({'templateAnchorHrefBegin' => undef});
 
 
@@ -81,7 +84,11 @@ $toc->setOptions({
 	'templateAnchorNameBegin' => '"<$anchorName>"'
 });
 $tocInsertor->insert($toc, "<h1>Header</h1>", {'output' => \$output});
-ok($output, "<ul>\n<li><a href=\"#1h\">Header</a></li>\n</ul><h1><1h>Header</h1>");
+eq_or_diff(
+    $output,
+    "<ul>\n<li><a href=\"#1h\">Header</a></li>\n</ul><h1><1h>Header</h1>",
+    'templateAnchorNameBegin'
+);
 $toc->setOptions({'templateAnchorName' => undef});
 
 
@@ -99,7 +106,11 @@ $toc->setOptions({'templateAnchorNameBegin' => \&AssembleAnchorName});
 	# Propagate ToC
 $tocInsertor->insert($toc, "<h1>Header</h1>", {'output' => \$output});
 	# Test ToC
-ok($output, "<ul>\n<li><a href=\"#h-1\">Header</a></li>\n</ul><h1>h11Header</h1>");
+eq_or_diff(
+    $output,
+    "<ul>\n<li><a href=\"#h-1\">Header</a></li>\n</ul><h1>h11Header</h1>",
+    'templateAnchorName'
+);
 	# Restore options
 $toc->setOptions({'templateAnchorNameBegin' => undef});
 
@@ -109,7 +120,7 @@ $toc->setOptions({'templateAnchorNameBegin' => undef});
 	# Set options
 $toc->setOptions({'doNumberToken' => 1});
 $tocInsertor->insert($toc, "<h1>Header</h1>", {'output' => \$output});
-ok("$output\n", <<HTML);
+eq_or_diff("$output\n", <<HTML, 'doNumberToken');
 <ul>
 <li><a href="#h-1">Header</a></li>
 </ul><h1><a name="h-1"></a>1 &nbsp;Header</h1>
@@ -131,7 +142,7 @@ $toc->setOptions({
 	# Propagate ToC
 $tocInsertor->insert($toc, "<h1>Header</h1>", {'output' => \$output});
 	# Test ToC
-ok("$output\n", <<'EOT');
+eq_or_diff("$output\n", <<'EOT', 'templateTokenNumber');
 <ul>
 <li><a href="#h-1">Header</a></li>
 </ul><h1><a name="h-1"></a>-1-Header</h1>
@@ -157,7 +168,7 @@ $toc->setOptions({
 	# Propagate ToC
 $tocInsertor->insert($toc, "<h1>Header</h1>", {'output' => \$output});
 	# Test ToC
-ok("$output\n", <<'EOT');
+eq_or_diff("$output\n", <<'EOT', 'numberingStyle');
 <ul>
 <li><a href="#h-a">Header</a></li>
 </ul><h1><a name="h-a"></a>a &nbsp;Header</h1>
@@ -173,4 +184,8 @@ $toc->setOptions({
 
 $tocInsertor->insert($toc, '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"><h1>Header</h1>', {'output' => \$output});
 	# Test ToC
-ok($output, '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"><h1>Header</h1>');
+eq_or_diff(
+    $output,
+    '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"><h1>Header</h1>',
+    'declaration pass through'
+);

@@ -2,9 +2,8 @@
 # function: Test ToC generation.
 
 use strict;
-use Test;
-
-BEGIN { plan tests => 14; }
+use Test::More tests => 14;
+use Test::Differences;
 
 use HTML::Toc;
 use HTML::TocGenerator;
@@ -42,33 +41,33 @@ END {
 #--- 1. generate --------------------------------------------------------------
 
 $tocGenerator->generate($toc, "<h1>Header</h1>");
-ok($toc->format(), "<ul>\n<li>Header</li>\n</ul>");
+eq_or_diff($toc->format(), "<ul>\n<li>Header</li>\n</ul>", 'generate');
 
 
 #--- 2. generateFromFile ------------------------------------------------------
 
 $tocGenerator->generateFromFile($toc, $filename);
-ok($toc->format(), "<ul>\n<li>Header</li>\n</ul>");
+eq_or_diff($toc->format(), "<ul>\n<li>Header</li>\n</ul>", 'generateFromFile');
 
 
 #--- 3. generateFromFiles -----------------------------------------------------
 
 $tocGenerator->generateFromFile($toc, [$filename, $filename]);
-ok($toc->format(), "<ul>\n<li>Header</li>\n<li>Header</li>\n</ul>");
-	
+eq_or_diff($toc->format(), "<ul>\n<li>Header</li>\n<li>Header</li>\n</ul>", 'generateFromFiles');
+
 
 #--- 4. doLinkToToken -----------------------------------------------------
 
 $toc->setOptions({'doLinkToToken' => 1});
 $tocGenerator->generateFromFile($toc, $filename, {'globalGroups' => 1});
-ok($toc->format(), "<ul>\n<li><a href=\"#h-1\">Header</a></li>\n</ul>");
+eq_or_diff($toc->format(), "<ul>\n<li><a href=\"#h-1\">Header</a></li>\n</ul>", 'doLinkToToken');
 
 
 #--- 5. doLinkToFile -------------------------------------------------------
 
 $toc->setOptions({'doLinkToFile' => 1});
 $tocGenerator->generateFromFile($toc, $filename);
-ok($toc->format(), "<ul>\n<li><a href=\"$filename#h-1\">Header</a></li>\n</ul>");
+eq_or_diff($toc->format(), "<ul>\n<li><a href=\"$filename#h-1\">Header</a></li>\n</ul>", 'doLinkToFile');
 
 
 #--- 6. templateAnchorHrefBegin -----------------------------------------------
@@ -78,7 +77,7 @@ $toc->setOptions({'templateAnchorHrefBegin' => '"test-$file"'});
 	# Generate ToC
 $tocGenerator->generateFromFile($toc, $filename);
 	# Test ToC
-ok($toc->format(), "<ul>\n<li>test-".$filename."Header</a></li>\n</ul>");
+eq_or_diff($toc->format(), "<ul>\n<li>test-".$filename."Header</a></li>\n</ul>", 'templateAnchorHrefBegin');
 	# Reset options
 $toc->setOptions({'templateAnchorHrefBegin' => undef});
 
@@ -98,7 +97,7 @@ $toc->setOptions({'templateAnchorHrefBegin' => \&AssembleAnchorHrefBegin});
 	# Generate ToC
 $tocGenerator->generateFromFile($toc, $filename);
 	# Test ToC
-ok($toc->format(), "<ul>\n<li>".$filename."h11Header</a></li>\n</ul>");
+eq_or_diff($toc->format(), "<ul>\n<li>".$filename."h11Header</a></li>\n</ul>", 'templateAnchorHrefBegin');
 	# Reset options
 $toc->setOptions({'templateAnchorHrefBegin' => undef});
 
@@ -107,7 +106,7 @@ $toc->setOptions({'templateAnchorHrefBegin' => undef});
 
 $toc->setOptions({'levelToToc' => '2'});
 $tocGenerator->generate($toc, "<h1>Header</h1>");
-ok($toc->format(), "");
+eq_or_diff($toc->format(), "", 'levelToToc');
 
 
 #--- 9. levelToToc level 1 ---------------------------------------------------
@@ -118,7 +117,7 @@ $toc->setOptions({
 	'doLinkToToken' => 0,
 });
 $tocGenerator->generate($toc, "<h1>Header1</h1>\n<h2>Header2</h2>");
-ok($toc->format(), "<ul>\n<li>Header1</li>\n</ul>");
+eq_or_diff($toc->format(), "<ul>\n<li>Header1</li>\n</ul>", 'levelToToc level 1');
 
 
 #--- 10. levelToToc level 2 --------------------------------------------------
@@ -129,7 +128,7 @@ $toc->setOptions({
 	'doLinkToToken' => 0,
 });
 $tocGenerator->generate($toc, "<h1>Header1</h1>\n<h2>Header2</h2>");
-ok($toc->format(), "<ul>\n<li>Header2</li>\n</ul>");
+eq_or_diff($toc->format(), "<ul>\n<li>Header2</li>\n</ul>", 'levelToToc level 2');
 	# Restore options
 $toc->setOptions({
 	'levelToToc' => '.*',
@@ -141,7 +140,7 @@ $toc->setOptions({
 	# Set options
 $toc->setOptions({'tokenToToc' => []});
 $tocGenerator->generate($toc, "<h1>Header</h1>");
-ok($toc->format(), "");
+eq_or_diff($toc->format(), "", 'tokenToToc');
 
 
 #--- 12. groups nested --------------------------------------------------------
@@ -162,7 +161,7 @@ $toc->setOptions({
 $tocGenerator->generate(
 	$toc, "<h1>Header1</h1>\n<h1 class=appendix>Appendix</h1>"
 );
-ok($toc->format() . "\n", <<HTML);
+eq_or_diff($toc->format() . "\n", <<HTML, 'groups nested');
 <ul>
 <li>Header1
 <ul>
@@ -191,7 +190,7 @@ $toc->setOptions({
 $tocGenerator->generate(
 	$toc, "<h1>Header1</h1>\n<h1 class=appendix>Appendix</h1>"
 );
-ok($toc->format() . "\n", <<HTML);
+eq_or_diff($toc->format() . "\n", <<HTML, 'groups not nested');
 <ul>
 <li>Header1</li>
 </ul>
@@ -222,6 +221,9 @@ $toc->setOptions({
 	# Generate ToC
 $tocGenerator->generate($toc, '<h1><b>very</b> important</h1>');
 	# Test ToC
-ok($toc->format(), "<ul>\n<li><a href=\"#<b>very</b> important\">very important</a></li>\n</ul>");
+eq_or_diff($toc->format(),
+    "<ul>\n<li><a href=\"#<b>very</b> important\">very important</a></li>\n</ul>",
+    'text and children passed to templateAnchorName'
+);
 	# Reset options
 $toc->setOptions({'templateAnchorName' => undef});

@@ -11,7 +11,7 @@ use strict;
 BEGIN {
     use vars qw($VERSION);
 
-    $VERSION = '1.10';
+    $VERSION = '1.11';
 }
 
 

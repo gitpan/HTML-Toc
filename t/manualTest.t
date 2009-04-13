@@ -2,9 +2,8 @@
 # function: Test HTML::ToC generating a manual.
 
 use strict;
-use Test;
-
-BEGIN { plan tests => 3; }
+use Test::More tests => 3;
+use Test::Differences;
 
 use HTML::Toc;
 use HTML::TocGenerator;
@@ -80,7 +79,7 @@ sub TestInsertManualToc {
         my $tocOfFigures = new HTML::Toc;
         my $tocOfTables  = new HTML::Toc;
         my $tocInsertor  = new HTML::TocInsertor;
-        
+
                 # Set ToC options
         $toc->setOptions({
                 'doNestGroup'          => 1,
@@ -142,20 +141,20 @@ sub TestInsertManualToc {
         });
                 # Insert ToC
         $tocInsertor->insertIntoFile(
-                [$toc, $tocOfFigures, $tocOfTables], 
+                [$toc, $tocOfFigures, $tocOfTables],
                 't/ManualTest/manualTest1.htm', {
                          'doUseGroupsGlobal' => 1,
                          'output'            => \$output,
                          'outputFile'        => 't/ManualTest/manualTest2.htm'
                 }
         );
-        ok(<<HTML, $output);
+        eq_or_diff($output, <<HTML, 'Test inserting ToC into manual', {max_width => 120});
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html>
 <head>
    <title>Manual</title>
     <style type="text/css">
-       ul.toc_appendix1 { 
+       ul.toc_appendix1 {
          list-style-type: none;
          margin-left: 0;
          margin-top: 1em;
@@ -318,7 +317,7 @@ sub TestInsertManualForUpdating {
         my $tocOfFigures = new HTML::Toc;
         my $tocOfTables  = new HTML::Toc;
         my $tocUpdator   = new HTML::TocUpdator;
-        
+
                 # Set ToC options
         $toc->setOptions({
                 'doNestGroup'          => 1,
@@ -380,20 +379,20 @@ sub TestInsertManualForUpdating {
         });
                 # Insert ToC
         $tocUpdator->updateFile(
-                [$toc, $tocOfFigures, $tocOfTables], 
+                [$toc, $tocOfFigures, $tocOfTables],
                 't/ManualTest/manualTest1.htm', {
                          'doUseGroupsGlobal' => 1,
                          'output'            => \$output,
                          'outputFile'        => 't/ManualTest/manualTest3.htm'
                 }
         );
-        ok(<<HTML, $output);
+        eq_or_diff($output, <<HTML, 'Test inserting ToC into manual', {max_width => 120});
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html>
 <head>
    <title>Manual</title>
     <style type="text/css">
-       ul.toc_appendix1 { 
+       ul.toc_appendix1 {
          list-style-type: none;
          margin-left: 0;
          margin-top: 1em;
@@ -556,7 +555,7 @@ sub TestUpdateManual {
         my $tocOfFigures = new HTML::Toc;
         my $tocOfTables  = new HTML::Toc;
         my $tocUpdator   = new HTML::TocUpdator;
-        
+
                 # Set ToC options
         $toc->setOptions({
                 'doNestGroup'          => 1,
@@ -618,20 +617,20 @@ sub TestUpdateManual {
         });
                 # Insert ToC
         $tocUpdator->updateFile(
-                [$toc, $tocOfFigures, $tocOfTables], 
+                [$toc, $tocOfFigures, $tocOfTables],
                 't/ManualTest/manualTest3.htm', {
                          'doUseGroupsGlobal' => 1,
                          'output'            => \$output,
                          'outputFile'        => 't/ManualTest/manualTest4.htm'
                 }
         );
-        ok(<<HTML, $output);
+        eq_or_diff($output, <<HTML, 'Test inserting ToC into manual', {max_width => 120});
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html>
 <head>
    <title>Manual</title>
     <style type="text/css">
-       ul.toc_appendix1 { 
+       ul.toc_appendix1 {
          list-style-type: none;
          margin-left: 0;
          margin-top: 1em;

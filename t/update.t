@@ -2,9 +2,8 @@
 # function: Test ToC updating.
 
 use strict;
-use Test;
-
-BEGIN { plan tests => 6; }
+use Test::More tests => 6;
+use Test::Differences;
 
 use HTML::Toc;
 use HTML::TocUpdator;
@@ -43,7 +42,7 @@ END {
 #--- 1. update ----------------------------------------------------------------
 
 $tocUpdator->update($toc, "<h1>Header</h1>", {'output' => \$output});
-ok("$output\n", <<HTML);
+eq_or_diff("$output\n", <<HTML, "update");
 <!-- #BeginToc --><ul>
 <li><a href="#h-1">Header</a></li>
 </ul><!-- #EndToc --><h1><!-- #BeginTocAnchorNameBegin --><a name="h-1"></a><!-- #EndTocAnchorNameBegin --><!-- #BeginTocNumber -->1 &nbsp;<!-- #EndTocNumber -->Header</h1>
@@ -52,31 +51,35 @@ HTML
 #--- 2. updateFile ------------------------------------------------------------
 
 $tocUpdator->updateFile($toc, $filename, {'output' => \$output});
-	open(FILE, ">a.out1") || die "Can't create a.out1: $!";
-	print FILE $output; close(FILE);
+	open my $file, '>', 'a.out1' || die "Can't create a.out1: $!";
+	print $file $output; close $file;
 $output2 = <<HTML;
 <!-- #BeginToc --><ul>
 <li><a href="#h-1">Header</a></li>
 </ul><!-- #EndToc --><h1><!-- #BeginTocAnchorNameBegin --><a name="h-1"></a><!-- #EndTocAnchorNameBegin --><!-- #BeginTocNumber -->1 &nbsp;<!-- #EndTocNumber -->Header</h1>
 HTML
-	open(FILE, ">a.out2") || die "Can't create a.out2: $!";
-	print FILE $output2; close(FILE);
-ok($output, $output2);
-
+	open $file, '>', 'a.out2' || die "Can't create a.out2: $!";
+	print $file $output2; close $file;
+eq_or_diff($output, $output2, 'updateFile', {max_width => 120});
+END { for(qw/a.out1 a.out2/) {
+    unlink $_ or warn "Can't delete $_\n";
+}}
 
 #--- 3. insert ----------------------------------------------------------------
 
 $tocUpdator->insert($toc, "<h1>Header</h1>", {'output' => \$output});
-ok("$output\n", <<HTML);
+eq_or_diff("$output\n", <<HTML, 'insert', {max_width => 120});
 <!-- #BeginToc --><ul>
 <li><a href="#h-1">Header</a></li>
 </ul><!-- #EndToc --><h1><!-- #BeginTocAnchorNameBegin --><a name="h-1"></a><!-- #EndTocAnchorNameBegin --><!-- #BeginTocNumber -->1 &nbsp;<!-- #EndTocNumber -->Header</h1>
 HTML
 
+
+
 #--- 4. insertIntoFile --------------------------------------------------------
 
 $tocUpdator->insertIntoFile($toc, $filename, {'output' => \$output});
-ok($output, <<HTML);
+eq_or_diff($output, <<HTML, 'insertIntoFile', {max_width => 120});
 <!-- #BeginToc --><ul>
 <li><a href="#h-1">Header</a></li>
 </ul><!-- #EndToc --><h1><!-- #BeginTocAnchorNameBegin --><a name="h-1"></a><!-- #EndTocAnchorNameBegin --><!-- #BeginTocNumber -->1 &nbsp;<!-- #EndTocNumber -->Header</h1>
@@ -87,7 +90,7 @@ HTML
 
 $tocUpdator->update($toc, "<h1>Header</h1>", {'output' => \$output});
 $tocUpdator->update($toc, $output, {'output' => \$output2});
-ok("$output\n", <<'EOT');
+eq_or_diff("$output\n", <<'EOT', 'update twice', {max_width => 120});
 <!-- #BeginToc --><ul>
 <li><a href="#h-1">Header</a></li>
 </ul><!-- #EndToc --><h1><!-- #BeginTocAnchorNameBegin --><a name="h-1"></a><!-- #EndTocAnchorNameBegin --><!-- #BeginTocNumber -->1 &nbsp;<!-- #EndTocNumber -->Header</h1>
@@ -109,7 +112,7 @@ $toc->setOptions({
 	'tokenUpdateEndToc',                => '</toc>'
 });
 $tocUpdator->update($toc, "<h1>Header</h1>", {'output' => \$output});
-ok("$output\n", <<HTML);
+eq_or_diff("$output\n", <<HTML, 'token update begin & end', {max_width => 120});
 <toc><ul>
 <li><a href="#h-1">Header</a></li>
 </ul></toc><h1><tocAnchorNameBegin><a name></tocAnchorNameBegin><tocNumber>1 &nbsp;</tocNumber>Header<tocAnchorNameEnd></a></tocAnchorNameEnd></h1>

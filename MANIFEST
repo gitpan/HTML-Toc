@@ -6,10 +6,12 @@ TocInsertor.pm
 TocUpdator.pm
 Makefile.PL
 MANIFEST
+t/anchors.t
 t/extend.t
 t/format.t
 t/generate.t
 t/insert.t
+t/insertionPoint.t
 t/manualTest.t
 t/options.t
 t/podExamples.t

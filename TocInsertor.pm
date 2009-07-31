@@ -22,7 +22,7 @@ use HTML::TocGenerator;
 BEGIN {
     use vars qw(@ISA $VERSION);
 
-    $VERSION = '1.11';
+    $VERSION = '1.12';
 
     @ISA = qw(HTML::TocGenerator);
 }

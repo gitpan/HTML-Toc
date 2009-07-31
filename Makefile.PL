@@ -5,7 +5,7 @@ WriteMakefile(
     VERSION_FROM => 'Toc.pm',
     AUTHOR       => 'Freddy Vulto (fvulto@gmail.com)',
     ABSTRACT     => 'Generate, insert and update HTML Table of Contents',
-    PREREQ_PM    => {'HTML::Parser' => 0},
+    PREREQ_PM    => {'HTML::Parser' => 0, 'Test::Differences' => 0},
     MAN3PODS     => {},
 );
 
